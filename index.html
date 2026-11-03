@@ -453,12 +453,23 @@
     return v;
   }
   // 直近の記録を入力欄に引き継ぐ
+  // 指定ログの「最後のセット」の値を入力欄に引き継ぐ
   function prefillFrom(lg){
     if(!lg||!lg.sets.length) return;
-    const s=lg.sets[0];
+    const s=lg.sets[lg.sets.length-1];
     if("sec" in s){ ST.sec=s.sec; }
     else if("min" in s){ ST.min=s.min; ST.km=s.km; }
     else { ST.w=s.w; ST.r=s.r; }
+  }
+  // 種目の最新の記録（当日含む）から前回値をプレフィル。無ければ種目タイプの既定へ
+  function prefillForExercise(exId){
+    const ex=exById(exId);
+    let best=null;
+    for(const lg of DB.logs){ if(lg.exId===exId && lg.sets.length){ if(!best||lg.date>best.date) best=lg; } }
+    if(best){ prefillFrom(best); return; }
+    if(isStretchEx(ex)){ ST.sec=30; }
+    else if(isCardioEx(ex)){ ST.min=30; ST.km=5; }
+    else { ST.w=20; ST.r=10; }
   }
   function logFor(date, exId){ return DB.logs.find(l=>l.date===date && l.exId===exId); }
   // この日の種目を並び順（ord）でソート。ordが無いものは追加順を維持
@@ -660,16 +671,23 @@
       const incA = stretch ? 10 : cardio ? 5 : DB.settings.incW;   // 保持(秒) / 時間(分) / 重量
       const incB = cardio ? 0.5 : DB.settings.incR;                // 距離(km) / 回数
       const rnd = v => Math.round(v*100)/100;
+      const fieldA = stretch ? "sec" : cardio ? "min" : "w";   // 入力A → STのどの値か
+      const fieldB = cardio ? "km" : "r";                       // 入力B → STのどの値か
       const aIn=$("#aIn"), bIn=$("#bIn");
       const getA=()=>{ let v=parseFloat(aIn.value); if(isNaN(v))v=0; return Math.max(0,rnd(v)); };
       const getB=()=>{ if(!bIn)return 0; let v=parseFloat(bIn.value); if(isNaN(v))v=0; return Math.max(0,rnd(v)); };
+      const normB = v => fieldB==="r" ? Math.round(v) : v;      // 回数は整数
+      const setA = v=>{ v=Math.max(0,rnd(v)); aIn.value=fmtW(v); ST[fieldA]=v; };
+      const setB = v=>{ v=Math.max(0,normB(rnd(v))); if(bIn)bIn.value=fmtW(v); ST[fieldB]=v; };
       aIn.addEventListener("focus",()=>aIn.select());
-      $("#aMinus").onclick=()=>{ aIn.value=fmtW(Math.max(0, rnd(getA()-incA))); };
-      $("#aPlus").onclick =()=>{ aIn.value=fmtW(rnd(getA()+incA)); };
+      aIn.addEventListener("input",()=>{ ST[fieldA]=getA(); });
+      $("#aMinus").onclick=()=> setA(getA()-incA);
+      $("#aPlus").onclick =()=> setA(getA()+incA);
       if(bIn){
         bIn.addEventListener("focus",()=>bIn.select());
-        $("#bMinus").onclick=()=>{ bIn.value=fmtW(Math.max(0, rnd(getB()-incB))); };
-        $("#bPlus").onclick =()=>{ bIn.value=fmtW(rnd(getB()+incB)); };
+        bIn.addEventListener("input",()=>{ ST[fieldB]=normB(getB()); });
+        $("#bMinus").onclick=()=> setB(getB()-incB);
+        $("#bPlus").onclick =()=> setB(getB()+incB);
       }
 
       if($("#howtoBtn")) $("#howtoBtn").onclick=()=>openHowto(ST.exId);
@@ -680,13 +698,13 @@
         let setObj, prevBest, newBest, unit;
         if(stretch){
           if(a<=0){ toast("時間を入力してください"); return; }
-          setObj={sec:a}; prevBest=maxSec(ST.exId, ST.date); newBest=a; unit="秒";
+          ST.sec=a; setObj={sec:a}; prevBest=maxSec(ST.exId, ST.date); newBest=a; unit="秒";
         } else if(cardio){
           if(a<=0 && b<=0){ toast("時間か距離を入力してください"); return; }
-          setObj={min:a, km:b}; prevBest=maxDistance(ST.exId, ST.date); newBest=b; unit="km";
+          ST.min=a; ST.km=b; setObj={min:a, km:b}; prevBest=maxDistance(ST.exId, ST.date); newBest=b; unit="km";
         } else {
           if(a<=0 && b<=0){ toast("重量か回数を入力してください"); return; }
-          setObj={w:a, r:Math.round(b)}; prevBest=maxWeight(ST.exId, ST.date); newBest=a; unit="kg";
+          ST.w=a; ST.r=Math.round(b); setObj={w:a, r:Math.round(b)}; prevBest=maxWeight(ST.exId, ST.date); newBest=a; unit="kg";
         }
         let lg = logFor(ST.date, ST.exId);
         if(!lg){ lg={id:uid(), date:ST.date, exId:ST.exId, sets:[], memo:""}; DB.logs.push(lg); }
@@ -763,7 +781,7 @@
       if(e.target.dataset.del){ delExercise(e.target.dataset.del); return; }
       if(e.target.dataset.info){ openHowto(e.target.dataset.info, true); return; }
       ST.exId=b.dataset.ex; ST.editIdx=null;
-      prefillFrom(lastLogBefore(ST.exId, ST.date));
+      prefillForExercise(ST.exId);
       sheetClose(); renderRecord();
     });
     $("#addExBtn").onclick=openAddExercise;
@@ -846,7 +864,7 @@
     if($("#howtoBack")) $("#howtoBack").onclick=openPicker;
     if($("#howtoPick")) $("#howtoPick").onclick=()=>{
       ST.exId=exId; ST.editIdx=null;
-      prefillFrom(lastLogBefore(exId, ST.date));
+      prefillForExercise(exId);
       sheetClose(); renderRecord();
     };
     $("#howtoEdit").onclick=()=>openHowtoEdit(exId, fromPicker);
@@ -888,7 +906,7 @@
     body.querySelectorAll("[data-load]").forEach(b=>b.onclick=()=>{
       const t=DB.templates.find(x=>x.id===b.dataset.load);
       if(t && t.exIds.length){ ST.exId=t.exIds[0]; ST.editIdx=null;
-        prefillFrom(lastLogBefore(ST.exId, ST.date));
+        prefillForExercise(ST.exId);
         sheetClose(); renderRecord(); toast(`「${t.name}」を読み込みました`); }
     });
     body.querySelectorAll("[data-delt]").forEach(b=>b.onclick=()=>{
