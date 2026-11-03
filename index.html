@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>鉄ログ — 筋トレ記録</title>
+<meta name="theme-color" content="#0E1116">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="鉄ログ">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href='data:application/manifest+json,{"name":"鉄ログ","short_name":"鉄ログ","start_url":".","display":"standalone","background_color":"#0E1116","theme_color":"#0E1116","icons":[{"src":"data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 192 192%22%3E%3Crect width=%22192%22 height=%22192%22 rx=%2240%22 fill=%22%230E1116%22/%3E%3Crect x=%2228%22 y=%2286%22 width=%22136%22 height=%2220%22 rx=%224%22 fill=%22%23FFB020%22/%3E%3Crect x=%2222%22 y=%2266%22 width=%2218%22 height=%2260%22 rx=%224%22 fill=%22%23FFB020%22/%3E%3Crect x=%22152%22 y=%2266%22 width=%2218%22 height=%2260%22 rx=%224%22 fill=%22%23FFB020%22/%3E%3Crect x=%2210%22 y=%2278%22 width=%2212%22 height=%2236%22 rx=%224%22 fill=%22%23FFB020%22/%3E%3Crect x=%22170%22 y=%2278%22 width=%2212%22 height=%2236%22 rx=%224%22 fill=%22%23FFB020%22/%3E%3C/svg%3E","sizes":"192x192","type":"image/svg+xml"}]}'>
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#0E1116; --surface:#161B22; --surface-2:#1E252F; --surface-3:#262E39;
+    --line:#2A313C; --text:#EDEFF2; --muted:#949CA8; --muted-2:#6C7682;
+    --accent:#FFB020; --accent-ink:#1A1205; --accent-dim:#5a4312;
+    --good:#35C27B; --danger:#E5484D;
+    --c-chest:#E5484D; --c-back:#3E7BFA; --c-legs:#35C27B; --c-shoulder:#F5C518;
+    --c-arms:#A86BFA; --c-core:#26C6DA; --c-cardio:#FF8A3D; --c-other:#8A94A1;
+    --radius:16px; --radius-sm:11px;
+    --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+    --nav-h:64px;
+    --font:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI","Segoe UI",system-ui,sans-serif;
+  }
+  :root[data-theme="light"]{
+    color-scheme: light;
+    --bg:#EEF1F5; --surface:#FFFFFF; --surface-2:#F3F6F9; --surface-3:#E9EEF3;
+    --line:#DDE3EA; --text:#1A2029; --muted:#5B6472; --muted-2:#8A94A1;
+    --accent:#D98400; --accent-ink:#FFFFFF; --accent-dim:#f1d9a8;
+    --good:#1E9E63; --danger:#D23B40;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{scroll-padding-top:var(--safe-t);height:100%}
+  body{
+    margin:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:var(--font);font-size:16px;line-height:1.5;
+    padding-top:var(--safe-t);padding-bottom:var(--safe-b);
+    -webkit-font-smoothing:antialiased;overscroll-behavior-y:none;
+  }
+  /* topバーの色帯（safe-area帯） */
+  body::before{content:"";position:fixed;inset:0 0 auto;height:var(--safe-t);background:var(--bg);z-index:60}
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+  button{font-family:inherit;color:inherit;cursor:pointer}
+  input,select,textarea{font-family:inherit;font-size:16px}
+
+  .app{max-width:540px;margin:0 auto;min-height:100%;
+    padding:14px 16px calc(var(--nav-h) + var(--safe-b) + 20px);}
+  .screen-title{font-size:22px;font-weight:800;letter-spacing:.02em;margin:4px 2px 14px}
+  .screen-title .tag{font-size:12px;font-weight:600;color:var(--muted);margin-left:8px;letter-spacing:0}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+  .card h2{margin:0 0 12px;font-size:14px;font-weight:700;color:var(--muted);letter-spacing:.04em}
+  .row{display:flex;align-items:center;gap:10px}
+  .spread{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .muted{color:var(--muted)}
+  .small{font-size:13px}
+
+  /* 日付行 */
+  .datebar{display:flex;gap:8px;align-items:center;margin-bottom:14px}
+  .datebar input[type=date]{flex:1;background:var(--surface);border:1px solid var(--line);
+    color:var(--text);border-radius:var(--radius-sm);padding:12px 14px}
+  .btn-today{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);
+    padding:12px 14px;font-weight:700;white-space:nowrap}
+
+  /* 種目選択ボタン */
+  .pick{width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);padding:16px;display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .pick .big{font-size:19px;font-weight:800}
+  .pick .chev{margin-left:auto;color:var(--muted);font-size:22px}
+  .dot{width:11px;height:11px;border-radius:50%;flex:none;background:var(--c-other)}
+
+  .hint{font-size:13px;color:var(--muted);margin:2px 0 14px;display:flex;gap:10px;flex-wrap:wrap}
+  .hint b{color:var(--text);font-weight:700}
+
+  /* ステッパー */
+  .stepper{margin-bottom:14px}
+  .stepper .lab{font-size:13px;color:var(--muted);margin-bottom:7px;font-weight:600}
+  .stepper .ctl{display:flex;align-items:stretch;gap:10px}
+  .step-btn{flex:none;width:62px;border:1px solid var(--line);background:var(--surface-2);
+    border-radius:var(--radius-sm);font-size:30px;font-weight:600;line-height:1;
+    display:flex;align-items:center;justify-content:center;user-select:none}
+  .step-btn:active{background:var(--surface-3)}
+  .val{flex:1;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);
+    display:flex;align-items:baseline;justify-content:center;gap:4px;padding:6px 4px;min-width:0}
+  .val input{width:100%;background:transparent;border:none;text-align:center;color:var(--text);
+    font-size:40px;font-weight:800;padding:0;min-width:0}
+  .val input:focus{outline:none}
+  .val .unit{font-size:16px;color:var(--muted);font-weight:700;flex:none}
+
+  .btn-primary{width:100%;background:var(--accent);color:var(--accent-ink);border:none;
+    border-radius:var(--radius);padding:17px;font-size:18px;font-weight:800;letter-spacing:.02em}
+  .btn-primary:active{filter:brightness(.93)}
+  .btn-primary:disabled{background:var(--surface-2);color:var(--muted-2);border:1px solid var(--line)}
+  .btn-ghost{width:100%;background:var(--surface-2);border:1px solid var(--line);
+    border-radius:var(--radius-sm);padding:13px;font-weight:700}
+
+  /* 今日のセット */
+  .setline{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--line)}
+  .setline:first-of-type{border-top:none}
+  .setline .idx{width:26px;height:26px;border-radius:50%;background:var(--surface-3);color:var(--muted);
+    font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+  .setline .figs{font-size:17px;font-weight:700}
+  .setline .vol{margin-left:auto;color:var(--muted);font-size:13px}
+  .setline .del{flex:none;background:none;border:none;color:var(--muted-2);font-size:20px;padding:4px 6px}
+  .pb{color:var(--accent);font-weight:800;font-size:12px;border:1px solid var(--accent-dim);
+    border-radius:6px;padding:2px 6px}
+
+  /* タイマー */
+  .timer-wrap{display:flex;gap:16px;align-items:center}
+  .ring{position:relative;width:118px;height:118px;flex:none}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .t{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:30px;font-weight:800}
+  .presets{display:flex;flex-wrap:wrap;gap:8px;flex:1}
+  .preset{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;
+    padding:10px 0;font-weight:700;flex:1 1 40px;text-align:center}
+  .preset:active{background:var(--surface-3)}
+  .timer-ctl{display:flex;gap:8px;margin-top:12px}
+  .timer-ctl button{flex:1;border-radius:var(--radius-sm);padding:12px;font-weight:700;
+    border:1px solid var(--line);background:var(--surface-2)}
+  .timer-ctl .go{background:var(--accent);color:var(--accent-ink);border:none}
+
+  /* 履歴 */
+  .day{margin-bottom:14px}
+  .day .dhead{display:flex;align-items:baseline;gap:10px;margin:0 2px 8px}
+  .day .dhead .d{font-size:16px;font-weight:800}
+  .day .dhead .wd{font-size:12px;color:var(--muted)}
+  .day .dhead .tot{margin-left:auto;font-size:12px;color:var(--muted)}
+  .ex{padding:11px 0;border-top:1px solid var(--line)}
+  .ex:first-child{border-top:none}
+  .ex .exh{display:flex;align-items:center;gap:9px;margin-bottom:3px}
+  .ex .exh .nm{font-weight:700}
+  .ex .sets{font-size:14px;color:var(--muted);padding-left:20px}
+  .ex .memo{font-size:13px;color:var(--muted);padding-left:20px;margin-top:3px;font-style:italic}
+
+  /* グラフ */
+  canvas{width:100%;display:block}
+  select.sel{width:100%;background:var(--surface-2);border:1px solid var(--line);color:var(--text);
+    border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px}
+  .chartbox{height:190px;margin-top:4px}
+  .legend{font-size:12px;color:var(--muted);margin-top:6px}
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .stat{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px}
+  .stat .k{font-size:12px;color:var(--muted)}
+  .stat .v{font-size:24px;font-weight:800;margin-top:2px}
+  .stat .v small{font-size:13px;color:var(--muted);font-weight:600}
+
+  /* カレンダー */
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .cal-head button{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;
+    width:44px;height:40px;font-size:20px;font-weight:700}
+  .cal-head .mo{font-size:18px;font-weight:800}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .cal-grid .wd{text-align:center;font-size:11px;color:var(--muted);padding:4px 0;font-weight:700}
+  .cell{aspect-ratio:1;border-radius:10px;border:1px solid transparent;background:var(--surface-2);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;position:relative}
+  .cell.empty{background:transparent;border:none}
+  .cell .n{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+  .cell.has{border-color:var(--accent-dim)}
+  .cell.has .n{color:var(--accent)}
+  .cell .cdot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  .cell.today{outline:2px solid var(--accent);outline-offset:-2px}
+  .cell.sun .n{color:var(--c-chest)} .cell.sat .n{color:var(--c-back)}
+
+  /* 設定 */
+  .set-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 0;border-top:1px solid var(--line)}
+  .set-row:first-child{border-top:none}
+  .seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .seg button{padding:9px 14px;font-weight:700;background:transparent;border:none;color:var(--muted)}
+  .seg button.on{background:var(--accent);color:var(--accent-ink)}
+  textarea.io{width:100%;height:120px;background:var(--surface-2);border:1px solid var(--line);
+    color:var(--text);border-radius:var(--radius-sm);padding:12px;resize:vertical;font-size:13px}
+
+  /* 下部ナビ */
+  nav{position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--surface);
+    border-top:1px solid var(--line);padding-bottom:var(--safe-b);
+    display:flex;max-width:540px;margin:0 auto}
+  nav button{flex:1;background:none;border:none;height:var(--nav-h);color:var(--muted-2);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10px;font-weight:700}
+  nav button .ic{font-size:21px;line-height:1}
+  nav button.on{color:var(--accent)}
+
+  /* シート（モーダル） */
+  .sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;opacity:0;pointer-events:none;transition:opacity .18s}
+  .sheet-bg.open{opacity:1;pointer-events:auto}
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:101;background:var(--surface);
+    border-radius:20px 20px 0 0;border-top:1px solid var(--line);
+    max-width:540px;margin:0 auto;max-height:86vh;display:flex;flex-direction:column;
+    transform:translateY(100%);transition:transform .22s cubic-bezier(.2,.8,.2,1);
+    padding-bottom:var(--safe-b)}
+  .sheet.open{transform:translateY(0)}
+  .sheet .grip{width:40px;height:4px;background:var(--line);border-radius:2px;margin:10px auto 4px}
+  .sheet .shead{display:flex;align-items:center;justify-content:space-between;padding:8px 16px 12px}
+  .sheet .shead h3{margin:0;font-size:17px;font-weight:800}
+  .sheet .shead .x{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;width:40px;height:36px;font-size:18px}
+  .sheet .sbody{overflow-y:auto;padding:0 16px 20px;-webkit-overflow-scrolling:touch}
+
+  .cat-tabs{display:flex;gap:7px;overflow-x:auto;padding:4px 0 12px;-webkit-overflow-scrolling:touch}
+  .cat-tabs button{white-space:nowrap;background:var(--surface-2);border:1px solid var(--line);
+    border-radius:999px;padding:8px 14px;font-weight:700;font-size:14px;color:var(--muted);display:flex;gap:7px;align-items:center}
+  .cat-tabs button.on{color:var(--text);border-color:var(--accent-dim)}
+  .ex-item{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+    background:none;border:none;padding:14px 4px;border-top:1px solid var(--line);font-size:16px}
+  .ex-item .en{font-weight:600;flex:1}
+  .ex-item .last{font-size:12px;color:var(--muted)}
+  .ex-item .trash{color:var(--muted-2);font-size:18px;padding:4px 6px}
+
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:13px;color:var(--muted);font-weight:600;margin-bottom:6px}
+  .field input,.field select,.field textarea{width:100%;background:var(--surface-2);border:1px solid var(--line);
+    color:var(--text);border-radius:var(--radius-sm);padding:12px 14px}
+  .field textarea{resize:vertical;min-height:48px}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:9px 13px;font-size:14px;font-weight:600}
+  .chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+  .empty{text-align:center;color:var(--muted);padding:34px 16px}
+  .empty .em-ic{font-size:34px;margin-bottom:8px}
+
+  /* トースト */
+  #toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + var(--safe-b) + 16px);transform:translateX(-50%) translateY(20px);
+    background:var(--surface-3);border:1px solid var(--line);color:var(--text);
+    padding:12px 18px;border-radius:999px;font-weight:700;font-size:14px;z-index:200;
+    opacity:0;pointer-events:none;transition:all .25s;max-width:90%;text-align:center}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #toast.pb{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<nav id="nav">
+  <button data-view="record" class="on"><span class="ic">🏋️</span>記録</button>
+  <button data-view="history"><span class="ic">📋</span>履歴</button>
+  <button data-view="graph"><span class="ic">📈</span>グラフ</button>
+  <button data-view="calendar"><span class="ic">📅</span>カレンダー</button>
+  <button data-view="settings"><span class="ic">⚙️</span>設定</button>
+</nav>
+
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="sheet">
+  <div class="grip"></div>
+  <div class="shead"><h3 id="sheetTitle"></h3><button class="x" id="sheetClose">✕</button></div>
+  <div class="sbody" id="sheetBody"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+(function(){
+  /* ========== データ層 ========== */
+  const KEY = "tetsulog.v1";
+  const CATS = [
+    {id:"chest",   name:"胸",   c:"var(--c-chest)"},
+    {id:"back",    name:"背中", c:"var(--c-back)"},
+    {id:"legs",    name:"脚",   c:"var(--c-legs)"},
+    {id:"shoulder",name:"肩",   c:"var(--c-shoulder)"},
+    {id:"arms",    name:"腕",   c:"var(--c-arms)"},
+    {id:"core",    name:"体幹", c:"var(--c-core)"},
+    {id:"cardio",  name:"有酸素",c:"var(--c-cardio)"},
+    {id:"other",   name:"その他",c:"var(--c-other)"},
+  ];
+  const catOf = id => CATS.find(c=>c.id===id) || CATS[CATS.length-1];
+
+  function seed(){
+    const mk=(name,cat)=>({id:uid(),name,cat});
+    return {
+      exercises:[
+        mk("ベンチプレス","chest"), mk("ダンベルプレス","chest"), mk("チェストフライ","chest"),
+        mk("デッドリフト","back"), mk("ラットプルダウン","back"), mk("ベントオーバーロウ","back"),
+        mk("スクワット","legs"), mk("レッグプレス","legs"), mk("レッグカール","legs"),
+        mk("ショルダープレス","shoulder"), mk("サイドレイズ","shoulder"),
+        mk("バーベルカール","arms"), mk("トライセプスプレスダウン","arms"),
+        mk("プランク","core"), mk("アブドミナルクランチ","core"),
+        mk("ランニング","cardio"),
+      ],
+      logs:[],
+      templates:[],
+      settings:{ theme:"auto", rest:90, autoTimer:true, incW:2.5, incR:1 }
+    };
+  }
+  function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+  let DB;
+  function load(){
+    try{
+      const raw = localStorage.getItem(KEY);
+      if(raw){ DB = JSON.parse(raw); }
+      else { DB = seed(); save(); }
+    }catch(e){ DB = seed(); }
+    if(!DB.settings) DB.settings = seed().settings;
+    if(!Array.isArray(DB.exercises)) DB.exercises=[];
+    if(!Array.isArray(DB.logs)) DB.logs=[];
+    if(!Array.isArray(DB.templates)) DB.templates=[];
+  }
+  function save(){
+    try{ localStorage.setItem(KEY, JSON.stringify(DB)); }
+    catch(e){ toast("保存できませんでした。端末の空き容量を確認してください"); }
+  }
+
+  /* ========== 小物 ========== */
+  const $ = (s,el=document)=>el.querySelector(s);
+  const app = $("#app");
+  const pad = n => String(n).padStart(2,"0");
+  const todayStr = ()=>{ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+  const WD = ["日","月","火","水","木","金","土"];
+  function fmtDate(s){ const [y,m,d]=s.split("-").map(Number); const dt=new Date(y,m-1,d); return `${m}月${d}日 (${WD[dt.getDay()]})`; }
+  function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+  function fmtW(w){ return (Math.round(w*10)/10).toString(); }
+
+  let toastTimer;
+  function toast(msg, isPB){
+    const t=$("#toast"); t.textContent=msg; t.className = "show"+(isPB?" pb":"");
+    clearTimeout(toastTimer); toastTimer=setTimeout(()=>{ t.className=""; }, isPB?2600:1900);
+    if(isPB && navigator.vibrate) navigator.vibrate([40,60,40]);
+  }
+
+  // 種目ごとの全セットから最大重量を返す（指定日より前、または全期間）
+  function maxWeight(exId, beforeDate){
+    let m=0;
+    for(const lg of DB.logs){
+      if(lg.exId!==exId) continue;
+      if(beforeDate && lg.date>=beforeDate) continue;
+      for(const s of lg.sets) if(s.w>m) m=s.w;
+    }
+    return m;
+  }
+  function volOfDay(date){
+    let v=0;
+    for(const lg of DB.logs) if(lg.date===date) for(const s of lg.sets) v+=s.w*s.r;
+    return v;
+  }
+  function logFor(date, exId){ return DB.logs.find(l=>l.date===date && l.exId===exId); }
+  function lastLogBefore(exId, date){
+    let best=null;
+    for(const lg of DB.logs){ if(lg.exId===exId && lg.date<date){ if(!best||lg.date>best.date) best=lg; } }
+    return best;
+  }
+
+  /* ========== 画面状態 ========== */
+  const ST = {
+    view:"record",
+    date: todayStr(),
+    exId: null,         // 記録中の種目
+    w: 20, r: 10,
+    calMonth: (()=>{ const d=new Date(); return {y:d.getFullYear(), m:d.getMonth()}; })(),
+    graphExId: null,
+  };
+
+  /* ========== テーマ ========== */
+  function applyTheme(){
+    const t = DB.settings.theme;
+    if(t==="auto") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", t);
+    const dark = t==="dark" || (t==="auto" && matchMedia("(prefers-color-scheme: dark)").matches);
+    const meta=$('meta[name=theme-color]'); if(meta) meta.content = dark ? "#0E1116":"#EEF1F5";
+  }
+
+  /* ========== ルーター ========== */
+  function go(view){
+    ST.view = view;
+    document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on", b.dataset.view===view));
+    render();
+    window.scrollTo(0,0);
+  }
+  function render(){
+    ({record:renderRecord, history:renderHistory, graph:renderGraph, calendar:renderCalendar, settings:renderSettings}[ST.view])();
+  }
+
+  /* ========== 記録画面 ========== */
+  function renderRecord(){
+    const ex = ST.exId ? DB.exercises.find(e=>e.id===ST.exId) : null;
+    const todayLog = ex ? logFor(ST.date, ST.exId) : null;
+    const todaySets = todayLog ? todayLog.sets : [];
+    const last = ex ? lastLogBefore(ST.exId, ST.date) : null;
+    const pbMax = ex ? maxWeight(ST.exId) : 0;
+
+    let hint = "";
+    if(ex){
+      if(last){
+        const parts = last.sets.map(s=>`${fmtW(s.w)}×${s.r}`).join(" / ");
+        hint = `<div class="hint"><span>前回 <b>${esc(last.date.slice(5).replace("-","/"))}</b></span><span>${esc(parts)}</span></div>`;
+      } else {
+        hint = `<div class="hint"><span>この種目の記録はまだありません</span></div>`;
+      }
+    }
+
+    app.innerHTML = `
+      <div class="screen-title">記録<span class="tag">${esc(fmtDate(ST.date))}</span></div>
+      <div class="datebar">
+        <input type="date" id="dateIn" value="${ST.date}" max="${todayStr()}">
+        <button class="btn-today" id="todayBtn">今日</button>
+      </div>
+
+      <button class="pick" id="pickBtn">
+        ${ex ? `<span class="dot" style="background:${catOf(ex.cat).c}"></span>
+                <span class="big">${esc(ex.name)}</span>`
+             : `<span class="dot"></span><span class="big muted">種目を選ぶ</span>`}
+        <span class="chev">›</span>
+      </button>
+
+      ${ex ? `
+        ${hint}
+        <div class="card">
+          <div class="stepper">
+            <div class="lab">重量</div>
+            <div class="ctl">
+              <button class="step-btn" id="wMinus">−</button>
+              <div class="val"><input id="wIn" class="num" type="text" inputmode="decimal" value="${fmtW(ST.w)}"><span class="unit">kg</span></div>
+              <button class="step-btn" id="wPlus">＋</button>
+            </div>
+          </div>
+          <div class="stepper">
+            <div class="lab">回数</div>
+            <div class="ctl">
+              <button class="step-btn" id="rMinus">−</button>
+              <div class="val"><input id="rIn" class="num" type="text" inputmode="numeric" value="${ST.r}"><span class="unit">回</span></div>
+              <button class="step-btn" id="rPlus">＋</button>
+            </div>
+          </div>
+          <button class="btn-primary" id="addSet">セットを記録</button>
+        </div>
+
+        <div class="card">
+          <h2>今日のセット — ${esc(ex.name)}</h2>
+          ${todaySets.length ? todaySets.map((s,i)=>{
+            const isPB = pbMax>0 && s.w>=pbMax && s.w===Math.max(...todaySets.map(x=>x.w)) && s.w>maxWeight(ST.exId, ST.date);
+            return `<div class="setline">
+              <span class="idx num">${i+1}</span>
+              <span class="figs num">${fmtW(s.w)}<span class="muted" style="font-weight:600"> kg</span> × ${s.r}</span>
+              ${isPB?`<span class="pb">自己ベスト</span>`:""}
+              <span class="vol num">${fmtW(s.w*s.r)} kg</span>
+              <button class="del" data-i="${i}">✕</button>
+            </div>`;
+          }).join("") : `<div class="muted small">まだ記録がありません。上のボタンで追加します。</div>`}
+          <div class="field" style="margin-top:14px">
+            <label>メモ</label>
+            <textarea id="memoIn" placeholder="調子やフォームの気づきなど">${todayLog?esc(todayLog.memo||""):""}</textarea>
+          </div>
+        </div>
+      ` : `
+        <div class="empty">
+          <div class="em-ic">🏋️</div>
+          種目を選ぶと記録を始められます。<br>テンプレートからまとめて呼び出すこともできます。
+        </div>
+      `}
+
+      <div class="card">
+        <h2>インターバルタイマー</h2>
+        <div class="timer-wrap">
+          <div class="ring">
+            <svg width="118" height="118" viewBox="0 0 118 118">
+              <circle cx="59" cy="59" r="52" fill="none" stroke="var(--surface-3)" stroke-width="10"></circle>
+              <circle id="ringFg" cx="59" cy="59" r="52" fill="none" stroke="var(--accent)" stroke-width="10"
+                stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="0"></circle>
+            </svg>
+            <div class="t num" id="tDisp">${pad(Math.floor(DB.settings.rest/60))}:${pad(DB.settings.rest%60)}</div>
+          </div>
+          <div class="presets">
+            ${[60,90,120,180].map(s=>`<button class="preset" data-sec="${s}">${s<60?s+"秒":Math.floor(s/60)+"分"+(s%60?pad(s%60):"")}</button>`).join("")}
+          </div>
+        </div>
+        <div class="timer-ctl">
+          <button class="go" id="tStart">スタート</button>
+          <button id="tReset">リセット</button>
+        </div>
+      </div>
+    `;
+
+    // 日付
+    $("#dateIn").addEventListener("change", e=>{ ST.date=e.target.value||todayStr(); renderRecord(); });
+    $("#todayBtn").onclick = ()=>{ ST.date=todayStr(); renderRecord(); };
+    // 種目選択
+    $("#pickBtn").onclick = openPicker;
+
+    if(ex){
+      const incW = DB.settings.incW, incR = DB.settings.incR;
+      const wIn=$("#wIn"), rIn=$("#rIn");
+      const syncW=()=>{ let v=parseFloat(wIn.value); if(isNaN(v))v=0; v=Math.max(0,Math.round(v*100)/100); ST.w=v; };
+      const syncR=()=>{ let v=parseInt(rIn.value,10); if(isNaN(v))v=0; v=Math.max(0,v); ST.r=v; };
+      wIn.addEventListener("input", syncW); rIn.addEventListener("input", syncR);
+      wIn.addEventListener("focus",()=>wIn.select()); rIn.addEventListener("focus",()=>rIn.select());
+      $("#wMinus").onclick=()=>{ syncW(); ST.w=Math.max(0,Math.round((ST.w-incW)*100)/100); wIn.value=fmtW(ST.w); };
+      $("#wPlus").onclick =()=>{ syncW(); ST.w=Math.round((ST.w+incW)*100)/100; wIn.value=fmtW(ST.w); };
+      $("#rMinus").onclick=()=>{ syncR(); ST.r=Math.max(0,ST.r-incR); rIn.value=ST.r; };
+      $("#rPlus").onclick =()=>{ syncR(); ST.r=ST.r+incR; rIn.value=ST.r; };
+
+      $("#addSet").onclick = ()=>{
+        syncW(); syncR();
+        if(ST.w<=0 && ST.r<=0){ toast("重量か回数を入力してください"); return; }
+        const prevMax = maxWeight(ST.exId, ST.date);
+        let lg = logFor(ST.date, ST.exId);
+        if(!lg){ lg={id:uid(), date:ST.date, exId:ST.exId, sets:[], memo:""}; DB.logs.push(lg); }
+        lg.sets.push({w:ST.w, r:ST.r});
+        save();
+        if(ST.w>0 && ST.w>prevMax && prevMax>0) toast(`自己ベスト更新！ ${fmtW(ST.w)}kg 🎉`, true);
+        else if(ST.w>0 && prevMax===0) toast("最初の記録を保存しました");
+        else toast("セットを記録しました");
+        if(DB.settings.autoTimer) startTimer(DB.settings.rest);
+        renderRecord();
+      };
+
+      $("#memoIn").addEventListener("input", e=>{
+        let lg = logFor(ST.date, ST.exId);
+        if(!lg){ lg={id:uid(), date:ST.date, exId:ST.exId, sets:[], memo:""}; DB.logs.push(lg); }
+        lg.memo = e.target.value; save();
+      });
+
+      app.querySelectorAll(".del").forEach(b=>b.onclick=()=>{
+        const i=+b.dataset.i; const lg=logFor(ST.date,ST.exId);
+        if(lg){ lg.sets.splice(i,1); if(!lg.sets.length && !lg.memo){ DB.logs=DB.logs.filter(x=>x!==lg); } save(); renderRecord(); }
+      });
+    }
+
+    // タイマー配線
+    $("#tStart").onclick = ()=> timer.running ? pauseTimer() : startTimer(timer.remain || DB.settings.rest);
+    $("#tReset").onclick = ()=> resetTimer();
+    app.querySelectorAll(".preset").forEach(b=>b.onclick=()=>{ startTimer(+b.dataset.sec); });
+    paintTimer();
+  }
+
+  /* ========== 種目ピッカー（シート） ========== */
+  let pickerCat = "chest";
+  function openPicker(){
+    sheetOpen("種目を選ぶ", pickerBody());
+  }
+  function pickerBody(){
+    const list = DB.exercises.filter(e=>e.cat===pickerCat);
+    return `
+      <div class="cat-tabs">
+        ${CATS.map(c=>`<button data-cat="${c.id}" class="${c.id===pickerCat?"on":""}">
+          <span class="dot" style="background:${c.c}"></span>${c.name}</button>`).join("")}
+      </div>
+      <div id="exList">
+        ${list.length?list.map(e=>{
+          return `<button class="ex-item" data-ex="${e.id}">
+            <span class="dot" style="background:${catOf(e.cat).c}"></span>
+            <span class="en">${esc(e.name)}</span>
+            <span class="trash" data-del="${e.id}">🗑</span>
+          </button>`;
+        }).join(""):`<div class="muted small" style="padding:18px 4px">この部位の種目がありません。</div>`}
+      </div>
+      <button class="btn-ghost" id="addExBtn" style="margin-top:14px">＋ 新しい種目を追加</button>
+      <button class="btn-ghost" id="tplBtn" style="margin-top:10px">📁 テンプレートから呼び出す</button>
+    `;
+  }
+  function wirePicker(){
+    const body=$("#sheetBody");
+    body.querySelectorAll(".cat-tabs button").forEach(b=>b.onclick=()=>{ pickerCat=b.dataset.cat; body.innerHTML=pickerBody(); wirePicker(); });
+    body.querySelectorAll(".ex-item").forEach(b=>b.onclick=(e)=>{
+      if(e.target.dataset.del){ delExercise(e.target.dataset.del); return; }
+      ST.exId=b.dataset.ex;
+      const lb=lastLogBefore(ST.exId, ST.date);
+      if(lb && lb.sets.length){ ST.w=lb.sets[0].w; ST.r=lb.sets[0].r; }
+      sheetClose(); renderRecord();
+    });
+    $("#addExBtn").onclick=openAddExercise;
+    $("#tplBtn").onclick=openTemplatePick;
+  }
+  function delExercise(id){
+    const ex=DB.exercises.find(e=>e.id===id); if(!ex) return;
+    const cnt=DB.logs.filter(l=>l.exId===id).length;
+    if(!confirm(`「${ex.name}」を削除しますか？${cnt?`\n記録が ${cnt} 日分あります。これも消えます。`:""}`)) return;
+    DB.exercises=DB.exercises.filter(e=>e.id!==id);
+    DB.logs=DB.logs.filter(l=>l.exId!==id);
+    DB.templates.forEach(t=>t.exIds=t.exIds.filter(x=>x!==id));
+    if(ST.exId===id) ST.exId=null;
+    save(); $("#sheetBody").innerHTML=pickerBody(); wirePicker();
+  }
+  function openAddExercise(){
+    sheetOpen("種目を追加", `
+      <div class="field"><label>種目名</label><input id="neName" placeholder="例：インクラインベンチプレス"></div>
+      <div class="field"><label>部位</label>
+        <div class="chips" id="neCats">
+          ${CATS.map(c=>`<button class="chip ${c.id===pickerCat?"on":""}" data-c="${c.id}">${c.name}</button>`).join("")}
+        </div>
+      </div>
+      <button class="btn-primary" id="neSave" style="margin-top:6px">追加する</button>
+    `);
+    let sel=pickerCat;
+    const body=$("#sheetBody");
+    body.querySelectorAll("#neCats .chip").forEach(b=>b.onclick=()=>{ sel=b.dataset.c; body.querySelectorAll("#neCats .chip").forEach(x=>x.classList.toggle("on",x===b)); });
+    $("#neSave").onclick=()=>{
+      const nm=$("#neName").value.trim(); if(!nm){ toast("種目名を入力してください"); return; }
+      const ex={id:uid(),name:nm,cat:sel}; DB.exercises.push(ex); save();
+      pickerCat=sel; ST.exId=ex.id; sheetClose(); renderRecord(); toast("種目を追加しました");
+    };
+    setTimeout(()=>$("#neName").focus(),250);
+  }
+
+  /* ========== テンプレート ========== */
+  function openTemplatePick(){
+    sheetOpen("テンプレート", `
+      ${DB.templates.length?DB.templates.map(t=>`
+        <div class="setline" style="border-top:1px solid var(--line)">
+          <span class="figs">${esc(t.name)}</span>
+          <span class="vol">${t.exIds.length} 種目</span>
+          <button class="chip" data-load="${t.id}">読込</button>
+          <button class="del" data-delt="${t.id}">✕</button>
+        </div>`).join(""):`<div class="muted small" style="padding:16px 4px">テンプレートはまだありません。よく行うメニューを保存しておくと、その種目をまとめて選べます。</div>`}
+      <button class="btn-ghost" id="newTpl" style="margin-top:16px">＋ 新しいテンプレートを作る</button>
+    `);
+    const body=$("#sheetBody");
+    body.querySelectorAll("[data-load]").forEach(b=>b.onclick=()=>{
+      const t=DB.templates.find(x=>x.id===b.dataset.load);
+      if(t && t.exIds.length){ ST.exId=t.exIds[0];
+        const lb=lastLogBefore(ST.exId, ST.date); if(lb&&lb.sets.length){ST.w=lb.sets[0].w;ST.r=lb.sets[0].r;}
+        sheetClose(); renderRecord(); toast(`「${t.name}」を読み込みました`); }
+    });
+    body.querySelectorAll("[data-delt]").forEach(b=>b.onclick=()=>{
+      DB.templates=DB.templates.filter(x=>x.id!==b.dataset.delt); save(); openTemplatePick();
+    });
+    $("#newTpl").onclick=openNewTemplate;
+  }
+  function openNewTemplate(){
+    let chosen=new Set();
+    const render=()=>`
+      <div class="field"><label>テンプレート名</label><input id="tName" placeholder="例：胸の日"></div>
+      <label class="muted small" style="display:block;margin-bottom:8px">含める種目を選ぶ</label>
+      ${CATS.map(c=>{
+        const exs=DB.exercises.filter(e=>e.cat===c.id); if(!exs.length)return"";
+        return `<div style="margin-bottom:10px"><div class="muted small" style="margin:6px 0 6px"><span class="dot" style="display:inline-block;background:${c.c}"></span> ${c.name}</div>
+          <div class="chips">${exs.map(e=>`<button class="chip ${chosen.has(e.id)?"on":""}" data-e="${e.id}">${esc(e.name)}</button>`).join("")}</div></div>`;
+      }).join("")}
+      <button class="btn-primary" id="tSave" style="margin-top:8px">保存する</button>
+    `;
+    sheetOpen("テンプレートを作る", render());
+    const wire=()=>{
+      const body=$("#sheetBody");
+      body.querySelectorAll(".chip[data-e]").forEach(b=>b.onclick=()=>{
+        const id=b.dataset.e; if(chosen.has(id))chosen.delete(id); else chosen.add(id);
+        b.classList.toggle("on");
+      });
+      $("#tSave").onclick=()=>{
+        const nm=$("#tName").value.trim(); if(!nm){toast("名前を入力してください");return;}
+        if(!chosen.size){toast("種目を1つ以上選んでください");return;}
+        DB.templates.push({id:uid(),name:nm,exIds:[...chosen]}); save();
+        openTemplatePick(); toast("テンプレートを保存しました");
+      };
+    };
+    wire();
+  }
+
+  /* ========== タイマー ========== */
+  const timer = { running:false, remain:0, total:0, iv:null, endAt:0 };
+  const CIRC = 2*Math.PI*52;
+  function startTimer(sec){
+    sec = Math.max(1, Math.round(sec));
+    timer.total = sec; timer.remain = sec; timer.running = true;
+    timer.endAt = Date.now()+sec*1000;
+    clearInterval(timer.iv);
+    timer.iv = setInterval(tick, 200);
+    paintTimer(); setStartLabel();
+  }
+  function tick(){
+    const left = Math.max(0, Math.round((timer.endAt-Date.now())/1000));
+    timer.remain = left; paintTimer();
+    if(left<=0){ finishTimer(); }
+  }
+  function finishTimer(){
+    clearInterval(timer.iv); timer.running=false; timer.remain=0; paintTimer(); setStartLabel();
+    beep(); if(navigator.vibrate) navigator.vibrate([200,100,200,100,300]);
+    toast("休憩おわり。次のセットへ 💪");
+  }
+  function pauseTimer(){ clearInterval(timer.iv); timer.running=false; setStartLabel(); }
+  function resetTimer(){ clearInterval(timer.iv); timer.running=false; timer.remain=0; timer.total=0; paintTimer(); setStartLabel(); }
+  function setStartLabel(){ const b=$("#tStart"); if(b) b.textContent = timer.running?"一時停止":(timer.remain>0?"再開":"スタート"); }
+  function paintTimer(){
+    const disp=$("#tDisp"), fg=$("#ringFg"); if(!disp) return;
+    const shown = timer.running||timer.remain>0 ? timer.remain : DB.settings.rest;
+    disp.textContent = `${pad(Math.floor(shown/60))}:${pad(shown%60)}`;
+    const frac = timer.total>0 ? (timer.remain/timer.total) : 1;
+    if(fg) fg.setAttribute("stroke-dashoffset", String(CIRC*(1-frac)));
+  }
+  let actx;
+  function beep(){
+    try{
+      actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+      if(actx.state==="suspended") actx.resume();
+      [0,0.18,0.36].forEach((t,i)=>{
+        const o=actx.createOscillator(), g=actx.createGain();
+        o.type="sine"; o.frequency.value = i<2?880:1175;
+        o.connect(g); g.connect(actx.destination);
+        const s=actx.currentTime+t;
+        g.gain.setValueAtTime(0.0001,s); g.gain.exponentialRampToValueAtTime(0.5,s+0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001,s+0.15);
+        o.start(s); o.stop(s+0.16);
+      });
+    }catch(e){}
+  }
+
+  /* ========== 履歴画面 ========== */
+  function renderHistory(){
+    const dates=[...new Set(DB.logs.filter(l=>l.sets.length).map(l=>l.date))].sort().reverse();
+    app.innerHTML = `<div class="screen-title">履歴</div>` + (dates.length? dates.map(date=>{
+      const logs=DB.logs.filter(l=>l.date===date && l.sets.length);
+      const vol=volOfDay(date);
+      return `<div class="card day">
+        <div class="dhead"><span class="d num">${esc(fmtDate(date))}</span><span class="tot num">総挙上 ${fmtW(vol)} kg</span></div>
+        ${logs.map(lg=>{
+          const ex=DB.exercises.find(e=>e.id===lg.exId); const cat=ex?catOf(ex.cat):catOf("other");
+          const sets=lg.sets.map(s=>`${fmtW(s.w)}×${s.r}`).join(" ・ ");
+          return `<div class="ex">
+            <div class="exh"><span class="dot" style="background:${cat.c}"></span><span class="nm">${esc(ex?ex.name:"（削除された種目）")}</span>
+              <button class="del" data-edit="${lg.id}" style="margin-left:auto">✎</button></div>
+            <div class="sets num">${esc(sets)}</div>
+            ${lg.memo?`<div class="memo">${esc(lg.memo)}</div>`:""}
+          </div>`;
+        }).join("")}
+      </div>`;
+    }).join("") : `<div class="empty"><div class="em-ic">📋</div>まだ記録がありません。<br>「記録」タブから最初のセットを残しましょう。</div>`);
+
+    app.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{
+      const lg=DB.logs.find(l=>l.id===b.dataset.edit); if(!lg)return;
+      ST.date=lg.date; ST.exId=lg.exId;
+      if(lg.sets.length){ST.w=lg.sets[0].w;ST.r=lg.sets[0].r;}
+      go("record");
+    });
+  }
+
+  /* ========== グラフ画面 ========== */
+  function renderGraph(){
+    const exsWithData=[...new Set(DB.logs.filter(l=>l.sets.length).map(l=>l.exId))]
+      .map(id=>DB.exercises.find(e=>e.id===id)).filter(Boolean);
+    if(!ST.graphExId && exsWithData[0]) ST.graphExId=exsWithData[0].id;
+
+    app.innerHTML=`<div class="screen-title">グラフ</div>` + (exsWithData.length? `
+      <div class="card">
+        <h2>種目ごとの重量推移</h2>
+        <select class="sel" id="gSel">
+          ${exsWithData.map(e=>`<option value="${e.id}" ${e.id===ST.graphExId?"selected":""}>${esc(e.name)}</option>`).join("")}
+        </select>
+        <div class="chartbox"><canvas id="lineC"></canvas></div>
+        <div class="legend">各トレーニング日の最大重量（kg）</div>
+        <div class="stat-grid" id="gStats" style="margin-top:14px"></div>
+      </div>
+      <div class="card">
+        <h2>週ごとの総挙上量</h2>
+        <div class="chartbox"><canvas id="barC"></canvas></div>
+        <div class="legend">直近8週間 ・ 重量 × 回数の合計（kg）</div>
+      </div>
+    ` : `<div class="empty"><div class="em-ic">📈</div>記録がたまるとここにグラフが出ます。</div>`);
+
+    if(!exsWithData.length) return;
+    $("#gSel").onchange=e=>{ ST.graphExId=e.target.value; renderGraph(); };
+    drawExerciseChart();
+    drawWeeklyBar();
+  }
+  function drawExerciseChart(){
+    const logs=DB.logs.filter(l=>l.exId===ST.graphExId && l.sets.length).sort((a,b)=>a.date<b.date?-1:1);
+    const pts=logs.map(l=>({x:l.date, y:Math.max(...l.sets.map(s=>s.w))}));
+    lineChart($("#lineC"), pts);
+    // 統計
+    const all=logs.flatMap(l=>l.sets);
+    const pbW=Math.max(...all.map(s=>s.w));
+    const pb1rm=Math.max(...all.map(s=>Math.round(s.w*(1+s.r/30)*10)/10));
+    const totVol=logs.reduce((a,l)=>a+l.sets.reduce((x,s)=>x+s.w*s.r,0),0);
+    $("#gStats").innerHTML=`
+      <div class="stat"><div class="k">自己ベスト（重量）</div><div class="v num">${fmtW(pbW)}<small> kg</small></div></div>
+      <div class="stat"><div class="k">推定1RM</div><div class="v num">${fmtW(pb1rm)}<small> kg</small></div></div>
+      <div class="stat"><div class="k">トレ回数</div><div class="v num">${logs.length}<small> 日</small></div></div>
+      <div class="stat"><div class="k">累計挙上量</div><div class="v num">${fmtW(Math.round(totVol))}<small> kg</small></div></div>
+    `;
+  }
+  function isoWeekKey(date){
+    const [y,m,d]=date.split("-").map(Number); const dt=new Date(y,m-1,d);
+    const day=(dt.getDay()+6)%7; dt.setDate(dt.getDate()-day); // 週の月曜
+    return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
+  }
+  function drawWeeklyBar(){
+    const map={};
+    for(const lg of DB.logs){ const k=isoWeekKey(lg.date); map[k]=(map[k]||0)+lg.sets.reduce((a,s)=>a+s.w*s.r,0); }
+    // 直近8週の枠を作る
+    const weeks=[]; const now=new Date(); const mon=new Date(now); mon.setDate(now.getDate()-((now.getDay()+6)%7));
+    for(let i=7;i>=0;i--){ const d=new Date(mon); d.setDate(mon.getDate()-i*7);
+      const k=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      weeks.push({label:`${d.getMonth()+1}/${d.getDate()}`, y:Math.round(map[k]||0)});
+    }
+    barChart($("#barC"), weeks);
+  }
+
+  /* ---- 軽量キャンバス描画 ---- */
+  function setupCanvas(cv){
+    const dpr=window.devicePixelRatio||1;
+    const w=cv.clientWidth, h=cv.parentElement.clientHeight||190;
+    cv.width=w*dpr; cv.height=h*dpr;
+    const ctx=cv.getContext("2d"); ctx.scale(dpr,dpr);
+    return {ctx,w,h};
+  }
+  function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function lineChart(cv, pts){
+    const {ctx,w,h}=setupCanvas(cv);
+    const padL=40,padR=14,padT=14,padB=26;
+    const col=cssVar("--accent"), line=cssVar("--line"), muted=cssVar("--muted"), text=cssVar("--text");
+    ctx.clearRect(0,0,w,h);
+    if(!pts.length) return;
+    let ys=pts.map(p=>p.y); let mn=Math.min(...ys), mx=Math.max(...ys);
+    if(mn===mx){ mn=Math.max(0,mn-5); mx=mx+5; } else { const pd=(mx-mn)*0.15; mn=Math.max(0,mn-pd); mx=mx+pd; }
+    const X=i=> pts.length===1? (padL+(w-padL-padR)/2) : padL + (w-padL-padR)*i/(pts.length-1);
+    const Y=v=> padT + (h-padT-padB)*(1-(v-mn)/(mx-mn||1));
+    // グリッド＋Y軸ラベル
+    ctx.strokeStyle=line; ctx.fillStyle=muted; ctx.font="11px sans-serif"; ctx.textAlign="right";
+    for(let g=0;g<=2;g++){ const v=mn+(mx-mn)*g/2, y=Y(v);
+      ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(w-padR,y); ctx.globalAlpha=.5; ctx.stroke(); ctx.globalAlpha=1;
+      ctx.fillText(fmtW(Math.round(v)), padL-6, y+4);
+    }
+    // 面
+    ctx.beginPath(); pts.forEach((p,i)=>{ const x=X(i),y=Y(p.y); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+    ctx.lineTo(X(pts.length-1),h-padB); ctx.lineTo(X(0),h-padB); ctx.closePath();
+    ctx.fillStyle=col; ctx.globalAlpha=.10; ctx.fill(); ctx.globalAlpha=1;
+    // 線
+    ctx.beginPath(); pts.forEach((p,i)=>{ const x=X(i),y=Y(p.y); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+    ctx.strokeStyle=col; ctx.lineWidth=2.5; ctx.lineJoin="round"; ctx.stroke();
+    // 点
+    pts.forEach((p,i)=>{ ctx.beginPath(); ctx.arc(X(i),Y(p.y),3.5,0,7); ctx.fillStyle=col; ctx.fill(); });
+    // X軸ラベル（最初と最後）
+    ctx.fillStyle=muted; ctx.font="11px sans-serif";
+    const lab=s=>s.slice(5).replace("-","/");
+    ctx.textAlign="left"; ctx.fillText(lab(pts[0].x), padL, h-8);
+    if(pts.length>1){ ctx.textAlign="right"; ctx.fillText(lab(pts[pts.length-1].x), w-padR, h-8); }
+  }
+  function barChart(cv, data){
+    const {ctx,w,h}=setupCanvas(cv);
+    const padL=40,padR=14,padT=14,padB=26;
+    const col=cssVar("--accent"), line=cssVar("--line"), muted=cssVar("--muted");
+    ctx.clearRect(0,0,w,h);
+    const mx=Math.max(1,...data.map(d=>d.y));
+    const Y=v=> padT + (h-padT-padB)*(1-v/mx);
+    ctx.strokeStyle=line; ctx.fillStyle=muted; ctx.font="11px sans-serif"; ctx.textAlign="right";
+    for(let g=0;g<=2;g++){ const v=mx*g/2, y=Y(v);
+      ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(w-padR,y); ctx.globalAlpha=.5; ctx.stroke(); ctx.globalAlpha=1;
+      ctx.fillText(v>=1000?Math.round(v/100)/10+"k":Math.round(v), padL-6, y+4);
+    }
+    const n=data.length, gap=8, bw=(w-padL-padR-gap*(n-1))/n;
+    data.forEach((d,i)=>{
+      const x=padL+i*(bw+gap), y=Y(d.y);
+      ctx.fillStyle=col; ctx.globalAlpha=d.y?1:.25;
+      const r=Math.min(5,bw/2); const bh=Math.max(d.y?2:0, h-padB-y);
+      roundRectTop(ctx,x,y,bw,bh,r); ctx.fill(); ctx.globalAlpha=1;
+      ctx.fillStyle=muted; ctx.font="10px sans-serif"; ctx.textAlign="center";
+      ctx.fillText(d.label, x+bw/2, h-8);
+    });
+  }
+  function roundRectTop(ctx,x,y,w,h,r){
+    ctx.beginPath(); ctx.moveTo(x,y+h); ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r);
+    ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r); ctx.lineTo(x+w,y+h); ctx.closePath();
+  }
+
+  /* ========== カレンダー画面 ========== */
+  function renderCalendar(){
+    const {y,m}=ST.calMonth;
+    const first=new Date(y,m,1), startWd=first.getDay(), days=new Date(y,m+1,0).getDate();
+    const logDates=new Set(DB.logs.filter(l=>l.sets.length).map(l=>l.date));
+    const cells=[];
+    for(let i=0;i<startWd;i++) cells.push(`<div class="cell empty"></div>`);
+    for(let d=1;d<=days;d++){
+      const ds=`${y}-${pad(m+1)}-${pad(d)}`; const wd=new Date(y,m,d).getDay();
+      const has=logDates.has(ds), isToday=ds===todayStr();
+      cells.push(`<button class="cell ${has?"has":""} ${isToday?"today":""} ${wd===0?"sun":""} ${wd===6?"sat":""}" data-d="${ds}">
+        <span class="n">${d}</span>${has?`<span class="cdot"></span>`:""}</button>`);
+    }
+    const monthVol=DB.logs.filter(l=>l.date.startsWith(`${y}-${pad(m+1)}`)).reduce((a,l)=>a+l.sets.reduce((x,s)=>x+s.w*s.r,0),0);
+    const monthDays=[...logDates].filter(d=>d.startsWith(`${y}-${pad(m+1)}`)).length;
+    app.innerHTML=`<div class="screen-title">カレンダー</div>
+      <div class="card">
+        <div class="cal-head">
+          <button id="prevM">‹</button>
+          <span class="mo num">${y}年 ${m+1}月</span>
+          <button id="nextM">›</button>
+        </div>
+        <div class="cal-grid">
+          ${WD.map(w=>`<div class="wd">${w}</div>`).join("")}
+          ${cells.join("")}
+        </div>
+        <div class="stat-grid" style="margin-top:14px">
+          <div class="stat"><div class="k">トレ日数</div><div class="v num">${monthDays}<small> 日</small></div></div>
+          <div class="stat"><div class="k">総挙上量</div><div class="v num">${fmtW(Math.round(monthVol))}<small> kg</small></div></div>
+        </div>
+      </div>`;
+    $("#prevM").onclick=()=>{ let {y,m}=ST.calMonth; m--; if(m<0){m=11;y--;} ST.calMonth={y,m}; renderCalendar(); };
+    $("#nextM").onclick=()=>{ let {y,m}=ST.calMonth; m++; if(m>11){m=0;y++;} ST.calMonth={y,m}; renderCalendar(); };
+    app.querySelectorAll(".cell[data-d]").forEach(b=>b.onclick=()=>openDay(b.dataset.d));
+  }
+  function openDay(date){
+    const logs=DB.logs.filter(l=>l.date===date && l.sets.length);
+    sheetOpen(fmtDate(date), `
+      ${logs.length? logs.map(lg=>{
+        const ex=DB.exercises.find(e=>e.id===lg.exId); const cat=ex?catOf(ex.cat):catOf("other");
+        return `<div class="ex" style="border-top:1px solid var(--line)">
+          <div class="exh"><span class="dot" style="background:${cat.c}"></span><span class="nm">${esc(ex?ex.name:"（削除）")}</span></div>
+          <div class="sets num">${lg.sets.map(s=>`${fmtW(s.w)}×${s.r}`).join(" ・ ")}</div>
+          ${lg.memo?`<div class="memo">${esc(lg.memo)}</div>`:""}
+        </div>`;}).join("")
+       : `<div class="muted small" style="padding:14px 4px">この日の記録はありません。</div>`}
+      <button class="btn-primary" id="goRec" style="margin-top:16px">この日に記録する</button>
+    `);
+    $("#goRec").onclick=()=>{ ST.date=date; sheetClose(); go("record"); };
+  }
+
+  /* ========== 設定画面 ========== */
+  function renderSettings(){
+    const s=DB.settings;
+    const seg=(cur,opts,id)=>`<div class="seg" id="${id}">${opts.map(o=>`<button data-v="${o.v}" class="${o.v==cur?"on":""}">${o.t}</button>`).join("")}</div>`;
+    app.innerHTML=`<div class="screen-title">設定</div>
+      <div class="card">
+        <div class="set-row"><span>テーマ</span>${seg(s.theme,[{v:"auto",t:"自動"},{v:"dark",t:"ダーク"},{v:"light",t:"ライト"}],"segTheme")}</div>
+        <div class="set-row"><span>休憩の長さ</span>${seg(s.rest,[{v:60,t:"60"},{v:90,t:"90"},{v:120,t:"120"},{v:180,t:"180"}],"segRest")}</div>
+        <div class="set-row"><span>記録後に自動でタイマー</span>${seg(s.autoTimer?1:0,[{v:1,t:"オン"},{v:0,t:"オフ"}],"segAuto")}</div>
+        <div class="set-row"><span>重量の増減幅</span>${seg(s.incW,[{v:1.25,t:"1.25"},{v:2.5,t:"2.5"},{v:5,t:"5"}],"segIncW")}</div>
+      </div>
+      <div class="card">
+        <h2>バックアップ</h2>
+        <p class="muted small" style="margin:0 0 12px">データはこの端末のブラウザ内だけに保存されています。機種変更やブラウザの削除に備えて、ときどき書き出しておくと安心です。</p>
+        <button class="btn-ghost" id="expFile">💾 ファイルに書き出す</button>
+        <button class="btn-ghost" id="expCopy" style="margin-top:10px">📋 コピーする（テキスト）</button>
+        <button class="btn-ghost" id="impBtn" style="margin-top:10px">📥 読み込む（貼り付け）</button>
+        <div class="legend" style="margin-top:14px">種目 ${DB.exercises.length} ・ 記録 ${DB.logs.filter(l=>l.sets.length).length} 日 ・ テンプレート ${DB.templates.length}</div>
+      </div>
+      <div class="card">
+        <h2>リセット</h2>
+        <button class="btn-ghost" id="wipe" style="color:var(--danger);border-color:var(--danger)">すべての記録を削除</button>
+      </div>
+      <div class="legend" style="text-align:center;margin-top:4px">鉄ログ ・ 自分だけの筋トレ記録</div>
+    `;
+    const wireSeg=(id,fn)=>{ const el=$("#"+id); el.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+      el.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); fn(b.dataset.v); }); };
+    wireSeg("segTheme",v=>{ s.theme=v; save(); applyTheme(); });
+    wireSeg("segRest",v=>{ s.rest=+v; save(); });
+    wireSeg("segAuto",v=>{ s.autoTimer=(v==="1"); save(); });
+    wireSeg("segIncW",v=>{ s.incW=+v; save(); });
+
+    $("#expFile").onclick=exportFile;
+    $("#expCopy").onclick=exportCopy;
+    $("#impBtn").onclick=openImport;
+    $("#wipe").onclick=()=>{ if(confirm("本当にすべての記録・種目・テンプレートを削除しますか？この操作は元に戻せません。")){ DB=seed(); save(); ST.exId=null; toast("初期化しました"); go("record"); } };
+  }
+  function exportFile(){
+    try{
+      const blob=new Blob([JSON.stringify(DB)],{type:"application/json"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a"); a.href=url; a.download=`tetsulog-${todayStr()}.json`;
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+      toast("ファイルを書き出しました");
+    }catch(e){ toast("この環境では保存できません。コピーをお使いください"); }
+  }
+  async function exportCopy(){
+    const txt=JSON.stringify(DB);
+    try{ await navigator.clipboard.writeText(txt); toast("コピーしました。メモ等に貼って保管を"); }
+    catch(e){
+      sheetOpen("バックアップ（コピー）", `<p class="muted small">下のテキストを全選択してコピーし、安全な場所に保管してください。</p>
+        <textarea class="io" id="expArea" readonly style="height:180px">${esc(txt)}</textarea>`);
+      setTimeout(()=>{ const a=$("#expArea"); if(a){a.focus();a.select();} },250);
+    }
+  }
+  function openImport(){
+    sheetOpen("データを読み込む", `
+      <p class="muted small">書き出したテキストを貼り付けて読み込みます。<b style="color:var(--danger)">現在のデータは上書きされます。</b></p>
+      <textarea class="io" id="impArea" placeholder="ここにバックアップのテキストを貼り付け"></textarea>
+      <button class="btn-primary" id="impDo" style="margin-top:12px">読み込んで上書き</button>
+    `);
+    $("#impDo").onclick=()=>{
+      const v=$("#impArea").value.trim(); if(!v){toast("テキストを貼り付けてください");return;}
+      try{
+        const obj=JSON.parse(v);
+        if(!obj.exercises||!obj.logs) throw 0;
+        if(!confirm("現在のデータを上書きして読み込みますか？")) return;
+        DB=obj; if(!DB.settings)DB.settings=seed().settings; if(!DB.templates)DB.templates=[];
+        save(); applyTheme(); ST.exId=null; sheetClose(); go("record"); toast("読み込みました");
+      }catch(e){ toast("データの形式が正しくありません"); }
+    };
+  }
+
+  /* ========== シート共通 ========== */
+  function sheetOpen(title, html){
+    $("#sheetTitle").textContent=title; $("#sheetBody").innerHTML=html;
+    $("#sheetBg").classList.add("open"); $("#sheet").classList.add("open");
+    if(title==="種目を選ぶ") wirePicker();
+  }
+  function sheetClose(){ $("#sheetBg").classList.remove("open"); $("#sheet").classList.remove("open"); }
+  $("#sheetBg").onclick=sheetClose; $("#sheetClose").onclick=sheetClose;
+
+  /* ========== 起動 ========== */
+  document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>go(b.dataset.view));
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>{ if(DB.settings.theme==="auto"){applyTheme(); if(ST.view==="graph")renderGraph();} });
+  window.addEventListener("resize", ()=>{ if(ST.view==="graph") renderGraph(); });
+  // 画面復帰時にタイマーの残りを補正
+  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && timer.running){ tick(); } });
+
+  load(); applyTheme();
+  go("record");
+})();
+</script>
+</body>
+</html>
