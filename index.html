@@ -238,13 +238,15 @@
   .cat-tabs button{white-space:nowrap;background:var(--surface-2);border:1px solid var(--line);
     border-radius:999px;padding:8px 13px;font-weight:700;font-size:14px;color:var(--muted);display:flex;gap:6px;align-items:center}
   .cat-tabs button.on{color:var(--text);border-color:var(--accent-dim)}
-  .ex-item{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
-    background:none;border:none;padding:14px 4px;border-top:1px solid var(--line);font-size:16px}
-  .ex-item .en{font-weight:600;flex:1}
-  .ex-item .last{font-size:12px;color:var(--muted)}
-  .ex-item .info{color:var(--muted);font-size:19px;padding:4px 8px}
+  .ex-item{display:flex;align-items:center;gap:8px;width:100%;
+    border-top:1px solid var(--line);font-size:16px}
+  .ex-item .p-drag{color:var(--muted-2);font-size:20px;line-height:1;padding:12px 2px 12px 2px;
+    cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;flex:none}
+  .ex-item.dragging{opacity:.65;background:var(--surface-2);border-radius:10px}
+  .ex-item .en{font-weight:600;flex:1 1 auto;min-width:0;text-align:left;background:none;border:none;
+    color:var(--text);font-size:16px;padding:14px 2px}
+  .ex-item .info{color:var(--muted);font-size:20px;padding:10px 8px;flex:none}
   .ex-item .info:active{color:var(--accent)}
-  .ex-item .trash{color:var(--muted-2);font-size:18px;padding:4px 6px}
 
   .field{margin-bottom:12px}
   .field label{display:block;font-size:13px;color:var(--muted);font-weight:600;margin-bottom:6px}
@@ -309,6 +311,23 @@
   const catOf = id => CATS.find(c=>c.id===id) || CATS[CATS.length-1];
   const kindForCat = cat => cat==="cardio" ? "cardio" : cat==="stretch" ? "stretch" : "weight";
 
+  // 記録方法（5種）。a=主入力, b=副入力(任意), pb=自己ベスト判定フィールド
+  const KINDS = {
+    weight: {label:"重量 × 回数", a:{lab:"重量",unit:"kg",f:"w",inc:()=>DB.settings.incW},         b:{lab:"回数",unit:"回",f:"r",inc:()=>DB.settings.incR,int:true}, pb:"w", unit:"kg"},
+    reps:   {label:"回数のみ",     a:{lab:"回数",unit:"回",f:"r",inc:()=>DB.settings.incR,int:true}, pb:"r", unit:"回"},
+    hold:   {label:"秒 × セット",  a:{lab:"保持時間",unit:"秒",f:"sec",inc:()=>10},                  b:{lab:"セット（任意）",unit:"回",f:"r",inc:()=>1,int:true}, pb:"sec", unit:"秒"},
+    cardio: {label:"時間・距離",   a:{lab:"時間",unit:"分",f:"min",inc:()=>5},                       b:{lab:"距離（任意）",unit:"km",f:"km",inc:()=>0.5}, pb:"km", unit:"km"},
+    stretch:{label:"時間（秒）",   a:{lab:"保持時間",unit:"秒",f:"sec",inc:()=>10},                  pb:"sec", unit:"秒"},
+  };
+  const kindMeta = ex => KINDS[(ex&&ex.kind)] || KINDS.weight;
+  // 自重・保持系の既定（種目名ベース）
+  const KIND_OVERRIDE = {
+    "腕立て伏せ":"reps","懸垂":"reps","ディップス":"reps",
+    "プランク":"hold",
+    "アブドミナルクランチ":"reps","レッグレイズ":"reps","ロシアンツイスト":"reps","バイシクルクランチ":"reps",
+  };
+  const defaultKind = (name,cat)=> KIND_OVERRIDE[name] || kindForCat(cat);
+
   // よく使う種目の標準ライブラリ（部位ごと）
   const STD = [
     ["ベンチプレス","chest"],["インクラインベンチプレス","chest"],["ダンベルプレス","chest"],
@@ -352,10 +371,10 @@
   }
   function seed(){
     return {
-      exercises: STD.map(([name,cat])=>({id:uid(),name,cat,kind:kindForCat(cat)})),
+      exercises: STD.map(([name,cat])=>({id:uid(),name,cat,kind:defaultKind(name,cat)})),
       logs:[],
       templates:[],
-      settings:{ theme:"auto", rest:90, autoTimer:true, incW:2.5, incR:1 }
+      settings:{ theme:"auto", rest:90, autoTimer:true, incW:2.5, incR:1, kindMigrated:true }
     };
   }
   // 既存データを壊さずに標準種目の不足分だけ追加
@@ -363,7 +382,7 @@
     let added=0;
     for(const [name,cat] of STD){
       if(!DB.exercises.some(e=>e.name===name && e.cat===cat)){
-        DB.exercises.push({id:uid(),name,cat,kind:kindForCat(cat)}); added++;
+        DB.exercises.push({id:uid(),name,cat,kind:defaultKind(name,cat)}); added++;
       }
     }
     save(); return added;
@@ -382,6 +401,11 @@
     if(!Array.isArray(DB.logs)) DB.logs=[];
     if(!Array.isArray(DB.templates)) DB.templates=[];
     DB.exercises.forEach(e=>{ if(!e.kind) e.kind = kindForCat(e.cat); });
+    // 一度だけ：プランク・自重系の記録方法を適切な方式へ（重量×回数のままのものだけ）
+    if(!DB.settings.kindMigrated){
+      DB.exercises.forEach(e=>{ if(e.kind==="weight" && KIND_OVERRIDE[e.name]) e.kind=KIND_OVERRIDE[e.name]; });
+      DB.settings.kindMigrated=true; save();
+    }
   }
   function save(){
     try{ localStorage.setItem(KEY, JSON.stringify(DB)); }
@@ -408,14 +432,26 @@
   const exById = id => DB.exercises.find(e=>e.id===id);
   const isCardioEx = ex => !!ex && ex.kind==="cardio";
   const isStretchEx = ex => !!ex && ex.kind==="stretch";
-  // セット1つの表示（重さ×回数 / 時間・距離 / 保持時間）
+  // セット1つの表示（重量×回数 / 時間・距離 / 秒(×セット) / 回数のみ）
   function setLabel(s){
-    if("sec" in s) return `${fmtW(s.sec)}秒`;
     if("min" in s){
       const p=[]; if(s.min>0)p.push(`${fmtW(s.min)}分`); if(s.km>0)p.push(`${fmtW(s.km)}km`);
       return p.length?p.join(" ・ "):"記録";
     }
-    return `${fmtW(s.w)}kg × ${s.r}`;
+    if("sec" in s) return ("r" in s) ? `${fmtW(s.sec)}秒 × ${s.r}` : `${fmtW(s.sec)}秒`;
+    if("w" in s) return `${fmtW(s.w)}kg × ${s.r}`;
+    if("r" in s) return `${s.r}回`;
+    return "記録";
+  }
+  // 種目の全セットから指定フィールドの最大値（自己ベスト判定用）
+  function maxField(exId, field, beforeDate){
+    let m=0;
+    for(const lg of DB.logs){
+      if(lg.exId!==exId) continue;
+      if(beforeDate && lg.date>=beforeDate) continue;
+      for(const s of lg.sets) if((field in s) && s[field]>m) m=s[field];
+    }
+    return m;
   }
   // 種目ごとの全セットから最大重量を返す（指定日より前、または全期間）
   function maxWeight(exId, beforeDate){
@@ -457,9 +493,7 @@
   function prefillFrom(lg){
     if(!lg||!lg.sets.length) return;
     const s=lg.sets[lg.sets.length-1];
-    if("sec" in s){ ST.sec=s.sec; }
-    else if("min" in s){ ST.min=s.min; ST.km=s.km; }
-    else { ST.w=s.w; ST.r=s.r; }
+    ["w","r","min","km","sec"].forEach(k=>{ if(k in s) ST[k]=s[k]; });
   }
   // 種目の最新の記録（当日含む）から前回値をプレフィル。無ければ種目タイプの既定へ
   function prefillForExercise(exId){
@@ -467,9 +501,12 @@
     let best=null;
     for(const lg of DB.logs){ if(lg.exId===exId && lg.sets.length){ if(!best||lg.date>best.date) best=lg; } }
     if(best){ prefillFrom(best); return; }
-    if(isStretchEx(ex)){ ST.sec=30; }
-    else if(isCardioEx(ex)){ ST.min=30; ST.km=5; }
-    else { ST.w=20; ST.r=10; }
+    const k = ex ? ex.kind : "weight";
+    if(k==="weight"){ ST.w=20; ST.r=10; }
+    else if(k==="reps"){ ST.r=10; }
+    else if(k==="hold"){ ST.sec=30; ST.r=3; }
+    else if(k==="cardio"){ ST.min=30; ST.km=5; }
+    else if(k==="stretch"){ ST.sec=30; }
   }
   function logFor(date, exId){ return DB.logs.find(l=>l.date===date && l.exId===exId); }
   // この日の種目を並び順（ord）でソート。ordが無いものは追加順を維持
@@ -524,15 +561,26 @@
   }
 
   /* ========== 記録画面 ========== */
+  function stepperHTML(spec, id){
+    return `<div class="stepper">
+      <div class="lab">${spec.lab}</div>
+      <div class="ctl">
+        <button class="step-btn" id="${id}Minus">−</button>
+        <div class="val"><input id="${id}In" class="num" type="text" inputmode="${spec.int?"numeric":"decimal"}" value="${fmtW(ST[spec.f])}"><span class="unit">${spec.unit}</span></div>
+        <button class="step-btn" id="${id}Plus">＋</button>
+      </div>
+    </div>`;
+  }
   function renderRecord(){
     const ex = ST.exId ? DB.exercises.find(e=>e.id===ST.exId) : null;
     const todayLog = ex ? logFor(ST.date, ST.exId) : null;
     const todaySets = todayLog ? todayLog.sets : [];
-    const cardio = isCardioEx(ex);
-    const stretch = isStretchEx(ex);
-    const weightKind = !!ex && ex.kind==="weight";
+    const meta = ex ? kindMeta(ex) : null;
+    const isWeight = !!ex && ex.kind==="weight";
+    const timeyTitle = !!ex && (ex.kind==="cardio"||ex.kind==="stretch");
     const last = ex ? lastLogBefore(ST.exId, ST.date) : null;
-    const pbMax = weightKind ? maxWeight(ST.exId) : 0;
+    const pbField = ex ? meta.pb : "w";
+    const pbPrev = ex ? maxField(ST.exId, pbField, ST.date) : 0;
 
     let hint = "";
     if(ex){
@@ -563,73 +611,28 @@
           <span><b>${ST.editIdx+1}セット目を修正中</b></span>
           <button class="chip" id="cancelEdit" style="margin-left:auto">やめる</button></div>` : ""}
         <div class="card">
-          ${stretch ? `
-          <div class="stepper">
-            <div class="lab">保持時間</div>
-            <div class="ctl">
-              <button class="step-btn" id="aMinus">−</button>
-              <div class="val"><input id="aIn" class="num" type="text" inputmode="numeric" value="${fmtW(ST.sec)}"><span class="unit">秒</span></div>
-              <button class="step-btn" id="aPlus">＋</button>
-            </div>
-          </div>
-          ` : cardio ? `
-          <div class="stepper">
-            <div class="lab">時間</div>
-            <div class="ctl">
-              <button class="step-btn" id="aMinus">−</button>
-              <div class="val"><input id="aIn" class="num" type="text" inputmode="numeric" value="${fmtW(ST.min)}"><span class="unit">分</span></div>
-              <button class="step-btn" id="aPlus">＋</button>
-            </div>
-          </div>
-          <div class="stepper">
-            <div class="lab">距離（任意）</div>
-            <div class="ctl">
-              <button class="step-btn" id="bMinus">−</button>
-              <div class="val"><input id="bIn" class="num" type="text" inputmode="decimal" value="${fmtW(ST.km)}"><span class="unit">km</span></div>
-              <button class="step-btn" id="bPlus">＋</button>
-            </div>
-          </div>
-          ` : `
-          <div class="stepper">
-            <div class="lab">重量</div>
-            <div class="ctl">
-              <button class="step-btn" id="aMinus">−</button>
-              <div class="val"><input id="aIn" class="num" type="text" inputmode="decimal" value="${fmtW(ST.w)}"><span class="unit">kg</span></div>
-              <button class="step-btn" id="aPlus">＋</button>
-            </div>
-          </div>
-          <div class="stepper">
-            <div class="lab">回数</div>
-            <div class="ctl">
-              <button class="step-btn" id="bMinus">−</button>
-              <div class="val"><input id="bIn" class="num" type="text" inputmode="numeric" value="${ST.r}"><span class="unit">回</span></div>
-              <button class="step-btn" id="bPlus">＋</button>
-            </div>
-          </div>
-          `}
-          <button class="btn-primary" id="addSet">${ST.editIdx!=null ? "このセットを修正" : (weightKind ? "セットを記録" : "記録する")}</button>
+          ${stepperHTML(meta.a,"a")}
+          ${meta.b ? stepperHTML(meta.b,"b") : ""}
+          <button class="btn-primary" id="addSet">${ST.editIdx!=null ? "このセットを修正" : (isWeight ? "セットを記録" : "記録する")}</button>
         </div>
 
         <div class="card">
-          <h2>${cardio?"今日の記録":"今日のセット"} — ${esc(ex.name)}</h2>
-          ${todaySets.length ? todaySets.map((s,i)=>{
-            const isPB = stretch
-              ? (s.sec>0 && s.sec===Math.max(...todaySets.map(x=>x.sec||0)) && s.sec>maxSec(ST.exId, ST.date))
-              : cardio
-              ? (s.km>0 && s.km===Math.max(...todaySets.map(x=>x.km||0)) && s.km>maxDistance(ST.exId, ST.date))
-              : (pbMax>0 && ("w" in s) && s.w===Math.max(...todaySets.filter(x=>"w" in x).map(x=>x.w)) && s.w>maxWeight(ST.exId, ST.date));
+          <h2>${timeyTitle?"今日の記録":"今日のセット"} — ${esc(ex.name)}</h2>
+          ${todaySets.length ? (()=>{ const dayMax=Math.max(0,...todaySets.map(x=>x[pbField]||0)); return todaySets.map((s,i)=>{
+            const v=s[pbField]||0;
+            const isPB = v>0 && v===dayMax && v>pbPrev;
             return `<div class="setline ${ST.editIdx===i?"editing":""}">
               <span class="idx num">${i+1}</span>
               <button class="setedit" data-editi="${i}">${esc(setLabel(s))}</button>
               ${isPB?`<span class="pb">自己ベスト</span>`:""}
-              ${weightKind?`<span class="vol num">${fmtW(s.w*s.r)} kg</span>`:""}
+              ${isWeight?`<span class="vol num">${fmtW(s.w*s.r)} kg</span>`:""}
               <button class="del" data-i="${i}">✕</button>
             </div>`;
-          }).join("") : `<div class="muted small">まだ記録がありません。上のボタンで追加します。</div>`}
+          }).join(""); })() : `<div class="muted small">まだ記録がありません。上のボタンで追加します。</div>`}
           <div class="muted small" style="margin-top:10px">記録をタップすると数値を直せます。✕で削除します。</div>
           <div class="field" style="margin-top:14px">
             <label>メモ</label>
-            <textarea id="memoIn" placeholder="${cardio?"コースや体感など":"調子やフォームの気づきなど"}">${todayLog?esc(todayLog.memo||""):""}</textarea>
+            <textarea id="memoIn" placeholder="${ex.kind==="cardio"?"コースや体感など":"調子やフォームの気づきなど"}">${todayLog?esc(todayLog.memo||""):""}</textarea>
           </div>
         </div>
       ` : `
@@ -668,24 +671,24 @@
     $("#pickBtn").onclick = openPicker;
 
     if(ex){
-      const incA = stretch ? 10 : cardio ? 5 : DB.settings.incW;   // 保持(秒) / 時間(分) / 重量
-      const incB = cardio ? 0.5 : DB.settings.incR;                // 距離(km) / 回数
       const rnd = v => Math.round(v*100)/100;
-      const fieldA = stretch ? "sec" : cardio ? "min" : "w";   // 入力A → STのどの値か
-      const fieldB = cardio ? "km" : "r";                       // 入力B → STのどの値か
+      const sa=meta.a, sb=meta.b||null;
+      const incA = sa.inc(), incB = sb?sb.inc():0;
+      const fieldA = sa.f, fieldB = sb?sb.f:null;
+      const normA = v => sa.int?Math.round(v):rnd(v);
+      const normB = v => (sb&&sb.int)?Math.round(v):rnd(v);
       const aIn=$("#aIn"), bIn=$("#bIn");
-      const getA=()=>{ let v=parseFloat(aIn.value); if(isNaN(v))v=0; return Math.max(0,rnd(v)); };
-      const getB=()=>{ if(!bIn)return 0; let v=parseFloat(bIn.value); if(isNaN(v))v=0; return Math.max(0,rnd(v)); };
-      const normB = v => fieldB==="r" ? Math.round(v) : v;      // 回数は整数
-      const setA = v=>{ v=Math.max(0,rnd(v)); aIn.value=fmtW(v); ST[fieldA]=v; };
-      const setB = v=>{ v=Math.max(0,normB(rnd(v))); if(bIn)bIn.value=fmtW(v); ST[fieldB]=v; };
+      const getA=()=>{ let v=parseFloat(aIn.value); if(isNaN(v))v=0; return Math.max(0,normA(v)); };
+      const getB=()=>{ if(!bIn)return 0; let v=parseFloat(bIn.value); if(isNaN(v))v=0; return Math.max(0,normB(v)); };
+      const setA = v=>{ v=Math.max(0,normA(v)); aIn.value=fmtW(v); ST[fieldA]=v; };
+      const setB = v=>{ v=Math.max(0,normB(v)); if(bIn)bIn.value=fmtW(v); if(fieldB)ST[fieldB]=v; };
       aIn.addEventListener("focus",()=>aIn.select());
       aIn.addEventListener("input",()=>{ ST[fieldA]=getA(); });
       $("#aMinus").onclick=()=> setA(getA()-incA);
       $("#aPlus").onclick =()=> setA(getA()+incA);
       if(bIn){
         bIn.addEventListener("focus",()=>bIn.select());
-        bIn.addEventListener("input",()=>{ ST[fieldB]=normB(getB()); });
+        bIn.addEventListener("input",()=>{ ST[fieldB]=getB(); });
         $("#bMinus").onclick=()=> setB(getB()-incB);
         $("#bPlus").onclick =()=> setB(getB()+incB);
       }
@@ -695,28 +698,21 @@
 
       $("#addSet").onclick = ()=>{
         const a=getA(), b=getB();
-        let setObj, prevBest, newBest, unit;
-        if(stretch){
-          if(a<=0){ toast("時間を入力してください"); return; }
-          ST.sec=a; setObj={sec:a}; prevBest=maxSec(ST.exId, ST.date); newBest=a; unit="秒";
-        } else if(cardio){
-          if(a<=0 && b<=0){ toast("時間か距離を入力してください"); return; }
-          ST.min=a; ST.km=b; setObj={min:a, km:b}; prevBest=maxDistance(ST.exId, ST.date); newBest=b; unit="km";
-        } else {
-          if(a<=0 && b<=0){ toast("重量か回数を入力してください"); return; }
-          ST.w=a; ST.r=Math.round(b); setObj={w:a, r:Math.round(b)}; prevBest=maxWeight(ST.exId, ST.date); newBest=a; unit="kg";
-        }
+        if(a<=0 && !(fieldB && b>0)){ toast(sb?`${sa.lab}か${sb.lab}を入力してください`:`${sa.lab}を入力してください`); return; }
+        ST[fieldA]=a; if(fieldB) ST[fieldB]=b;
+        const setObj={}; setObj[fieldA]=a; if(fieldB) setObj[fieldB]=b;
         let lg = logFor(ST.date, ST.exId);
         if(!lg){ lg={id:uid(), date:ST.date, exId:ST.exId, sets:[], memo:""}; DB.logs.push(lg); }
         if(ST.editIdx!=null && lg.sets[ST.editIdx]){
           lg.sets[ST.editIdx]=setObj; ST.editIdx=null; save(); toast("修正しました"); renderRecord(); return;
         }
-        lg.sets.push(setObj);
-        save();
-        if(newBest>0 && newBest>prevBest && prevBest>0) toast(`自己ベスト更新！ ${fmtW(newBest)}${unit} 🎉`, true);
+        const prevBest = maxField(ST.exId, meta.pb, ST.date);
+        lg.sets.push(setObj); save();
+        const newBest = setObj[meta.pb]||0;
+        if(newBest>0 && newBest>prevBest && prevBest>0) toast(`自己ベスト更新！ ${fmtW(newBest)}${meta.unit} 🎉`, true);
         else if(newBest>0 && prevBest===0) toast("最初の記録を保存しました");
-        else toast(weightKind?"セットを記録しました":"記録しました");
-        if(DB.settings.autoTimer && weightKind) startTimer(DB.settings.rest);
+        else toast(isWeight?"セットを記録しました":"記録しました");
+        if(DB.settings.autoTimer && isWeight) startTimer(DB.settings.rest);
         renderRecord();
       };
 
@@ -735,7 +731,7 @@
       app.querySelectorAll(".setedit").forEach(b=>b.onclick=()=>{
         const i=+b.dataset.editi; const lg=logFor(ST.date,ST.exId); if(!lg||!lg.sets[i])return;
         const s=lg.sets[i];
-        if("sec" in s){ ST.sec=s.sec; } else if("min" in s){ ST.min=s.min; ST.km=s.km; } else { ST.w=s.w; ST.r=s.r; }
+        ["w","r","min","km","sec"].forEach(k=>{ if(k in s) ST[k]=s[k]; });
         ST.editIdx=i; renderRecord(); window.scrollTo({top:0,behavior:"smooth"});
       });
     }
@@ -759,14 +755,14 @@
         ${CATS.map(c=>`<button data-cat="${c.id}" class="${c.id===pickerCat?"on":""}">
           <span class="dot" style="background:${c.c}"></span>${c.name}</button>`).join("")}
       </div>
-      <div id="exList">
+      <div id="exList" class="pick-list" data-cat="${pickerCat}">
         ${list.length?list.map(e=>{
-          return `<button class="ex-item" data-ex="${e.id}">
+          return `<div class="ex-item" data-ex="${e.id}">
+            <span class="p-drag" data-pdrag="${e.id}" aria-label="並び替え">≡</span>
             <span class="dot" style="background:${catOf(e.cat).c}"></span>
-            <span class="en">${esc(e.name)}</span>
-            <span class="info" data-info="${e.id}">ⓘ</span>
-            <span class="trash" data-del="${e.id}">🗑</span>
-          </button>`;
+            <button class="en" data-sel="${e.id}">${esc(e.name)}</button>
+            <span class="info" data-info="${e.id}">⋯</span>
+          </div>`;
         }).join(""):`<div class="muted small" style="padding:18px 4px">この部位の種目がありません。</div>`}
       </div>
       <button class="btn-ghost" id="addExBtn" style="margin-top:14px">＋ 新しい種目を追加</button>
@@ -777,13 +773,13 @@
   function wirePicker(){
     const body=$("#sheetBody");
     body.querySelectorAll(".cat-tabs button").forEach(b=>b.onclick=()=>{ pickerCat=b.dataset.cat; body.innerHTML=pickerBody(); wirePicker(); });
-    body.querySelectorAll(".ex-item").forEach(b=>b.onclick=(e)=>{
-      if(e.target.dataset.del){ delExercise(e.target.dataset.del); return; }
-      if(e.target.dataset.info){ openHowto(e.target.dataset.info, true); return; }
-      ST.exId=b.dataset.ex; ST.editIdx=null;
+    body.querySelectorAll("[data-sel]").forEach(b=>b.onclick=()=>{
+      ST.exId=b.dataset.sel; ST.editIdx=null;
       prefillForExercise(ST.exId);
       sheetClose(); renderRecord();
     });
+    body.querySelectorAll("[data-info]").forEach(b=>b.onclick=()=>openHowto(b.dataset.info, true));
+    wirePickerDrag();
     $("#addExBtn").onclick=openAddExercise;
     if($("#addStdBtn")) $("#addStdBtn").onclick=()=>{
       const n=addStandardExercises();
@@ -791,6 +787,42 @@
       toast(n? `${n} 種目を追加しました` : "追加できる種目はありませんでした");
     };
     $("#tplBtn").onclick=openTemplatePick;
+  }
+  // 種目を選ぶ画面：部位内の並び替え（DB.exercisesの順序を更新）
+  let pdrag=null;
+  function wirePickerDrag(){
+    const list=$("#exList"); if(!list)return;
+    list.querySelectorAll(".p-drag").forEach(h=>{
+      h.addEventListener("pointerdown", e=>{
+        e.preventDefault();
+        const el=h.closest(".ex-item"); if(!el)return;
+        pdrag={el,list};
+        el.classList.add("dragging");
+        try{ h.setPointerCapture(e.pointerId); }catch(_){}
+        document.addEventListener("pointermove", onPDragMove, {passive:false});
+        document.addEventListener("pointerup", onPDragEnd, {once:true});
+        document.addEventListener("pointercancel", onPDragEnd, {once:true});
+      });
+    });
+  }
+  function onPDragMove(e){
+    if(!pdrag)return; e.preventDefault();
+    const y=e.clientY;
+    const others=[...pdrag.list.querySelectorAll(".ex-item:not(.dragging)")];
+    let before=null;
+    for(const s of others){ const r=s.getBoundingClientRect(); if(y<r.top+r.height/2){ before=s; break; } }
+    if(before) pdrag.list.insertBefore(pdrag.el, before); else pdrag.list.appendChild(pdrag.el);
+  }
+  function onPDragEnd(){
+    document.removeEventListener("pointermove", onPDragMove, {passive:false});
+    if(!pdrag)return;
+    const {el,list}=pdrag; pdrag=null; el.classList.remove("dragging");
+    const cat=list.dataset.cat;
+    const newIds=[...list.querySelectorAll(".ex-item")].map(x=>x.dataset.ex);
+    const idxs=[]; DB.exercises.forEach((e,i)=>{ if(e.cat===cat) idxs.push(i); });
+    const byId={}; DB.exercises.forEach(e=>{ byId[e.id]=e; });
+    newIds.forEach((id,k)=>{ if(idxs[k]!=null && byId[id]) DB.exercises[idxs[k]]=byId[id]; });
+    save();
   }
   function delExercise(id){
     const ex=DB.exercises.find(e=>e.id===id); if(!ex) return;
@@ -813,8 +845,7 @@
       </div>
       <div class="field"><label>記録方法</label>
         <div class="chips" id="neKind">
-          <button class="chip ${selKind==="weight"?"on":""}" data-k="weight">重さ × 回数</button>
-          <button class="chip ${selKind==="cardio"?"on":""}" data-k="cardio">時間・距離</button>
+          ${Object.keys(KINDS).map(k=>`<button class="chip ${selKind===k?"on":""}" data-k="${k}">${KINDS[k].label}</button>`).join("")}
         </div>
       </div>
       <button class="btn-primary" id="neSave" style="margin-top:6px">追加する</button>
@@ -823,7 +854,7 @@
     const paintKind=()=>body.querySelectorAll("#neKind .chip").forEach(x=>x.classList.toggle("on",x.dataset.k===selKind));
     body.querySelectorAll("#neCats .chip").forEach(b=>b.onclick=()=>{
       sel=b.dataset.c; body.querySelectorAll("#neCats .chip").forEach(x=>x.classList.toggle("on",x===b));
-      selKind=kindForCat(sel); paintKind();
+      selKind=defaultKind("",sel); paintKind();
     });
     body.querySelectorAll("#neKind .chip").forEach(b=>b.onclick=()=>{ selKind=b.dataset.k; paintKind(); });
     $("#neSave").onclick=()=>{
@@ -842,8 +873,9 @@
     const lines=guidePoints(ex).split("\n").map(s=>s.trim()).filter(Boolean);
     const custom = (typeof ex.guide==="string" && !!ex.guide.trim()) || (typeof ex.desc==="string" && !!ex.desc.trim());
     sheetOpen(ex.name, `
-      <div style="margin:2px 0 12px;display:flex;align-items:center;gap:8px">
+      <div style="margin:2px 0 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span class="chip"><span class="dot" style="display:inline-block;background:${cat.c}"></span> ${cat.name}</span>
+        <span class="chip">${kindMeta(ex).label}</span>
         ${custom?`<span class="muted small">自分用に編集済み</span>`:""}
       </div>
       ${desc?`<p style="font-size:15px;line-height:1.65;margin:0 0 16px">${esc(desc)}</p>`:""}
@@ -857,9 +889,14 @@
         <button class="btn-primary" id="howtoPick" style="flex:1.5;padding:13px;font-size:16px">この種目で記録する</button>
       </div>`:""}
       <div style="display:flex;gap:8px;margin-top:10px">
-        <button class="btn-ghost" id="howtoEdit" style="margin-top:0">✎ ${(desc||lines.length)?"編集":"説明を書く"}</button>
+        <button class="btn-ghost" id="howtoEdit" style="margin-top:0">✎ ${(desc||lines.length)?"説明を編集":"説明を書く"}</button>
+        <button class="btn-ghost" id="howtoAI" style="margin-top:0">🤖 AIで下書き</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn-ghost" id="howtoSettings" style="margin-top:0">⚙ 種目の設定</button>
         ${custom?`<button class="btn-ghost" id="howtoReset" style="margin-top:0">既定に戻す</button>`:""}
       </div>
+      <button class="btn-ghost" id="howtoDel" style="margin-top:10px;color:var(--danger);border-color:var(--danger)">🗑 この種目を削除</button>
     `);
     if($("#howtoBack")) $("#howtoBack").onclick=openPicker;
     if($("#howtoPick")) $("#howtoPick").onclick=()=>{
@@ -868,9 +905,65 @@
       sheetClose(); renderRecord();
     };
     $("#howtoEdit").onclick=()=>openHowtoEdit(exId, fromPicker);
+    $("#howtoAI").onclick=()=>openHowtoAI(exId, fromPicker);
+    $("#howtoSettings").onclick=()=>openExerciseSettings(exId, fromPicker);
+    $("#howtoDel").onclick=()=>{
+      const cnt=DB.logs.filter(l=>l.exId===exId).length;
+      if(!confirm(`「${ex.name}」を削除しますか？${cnt?`\n記録が ${cnt} 日分あります。これも消えます。`:""}`)) return;
+      DB.exercises=DB.exercises.filter(e=>e.id!==exId);
+      DB.logs=DB.logs.filter(l=>l.exId!==exId);
+      DB.templates.forEach(t=>t.exIds=t.exIds.filter(x=>x!==exId));
+      if(ST.exId===exId) ST.exId=null;
+      save(); sheetClose(); renderRecord(); toast("削除しました");
+    };
     if($("#howtoReset")) $("#howtoReset").onclick=()=>{
       if(confirm("自分で書いた内容を消して、最初の内容に戻しますか？")){ delete ex.guide; delete ex.desc; save(); openHowto(exId, fromPicker); toast("既定に戻しました"); }
     };
+  }
+  // 種目の設定（名前・部位・記録方法の変更）
+  function openExerciseSettings(exId, fromPicker){
+    const ex=exById(exId); if(!ex)return;
+    let selCat=ex.cat, selKind=ex.kind;
+    sheetOpen(`${ex.name}｜設定`, `
+      <div class="field"><label>種目名</label><input id="esName" value="${esc(ex.name)}"></div>
+      <div class="field"><label>部位</label>
+        <div class="chips" id="esCats">
+          ${CATS.map(c=>`<button class="chip ${c.id===selCat?"on":""}" data-c="${c.id}">${c.name}</button>`).join("")}
+        </div>
+      </div>
+      <div class="field"><label>記録方法</label>
+        <div class="chips" id="esKind">
+          ${Object.keys(KINDS).map(k=>`<button class="chip ${selKind===k?"on":""}" data-k="${k}">${KINDS[k].label}</button>`).join("")}
+        </div>
+      </div>
+      <p class="muted small" style="margin:0 0 12px">記録方法を変えても、これまでの記録はそのまま残ります（新しく追加する記録から新方式になります）。</p>
+      <button class="btn-primary" id="esSave" style="margin-top:2px">保存する</button>
+    `);
+    const body=$("#sheetBody");
+    body.querySelectorAll("#esCats .chip").forEach(b=>b.onclick=()=>{ selCat=b.dataset.c; body.querySelectorAll("#esCats .chip").forEach(x=>x.classList.toggle("on",x===b)); });
+    body.querySelectorAll("#esKind .chip").forEach(b=>b.onclick=()=>{ selKind=b.dataset.k; body.querySelectorAll("#esKind .chip").forEach(x=>x.classList.toggle("on",x===b)); });
+    $("#esSave").onclick=()=>{
+      const nm=$("#esName").value.trim(); if(!nm){ toast("種目名を入力してください"); return; }
+      ex.name=nm; ex.cat=selCat; ex.kind=selKind; save();
+      openHowto(exId, fromPicker); toast("保存しました");
+    };
+  }
+  // AIで概要・やり方の下書きを作る（プロンプトをコピー）
+  function openHowtoAI(exId, fromPicker){
+    const ex=exById(exId); if(!ex)return;
+    const prompt =
+`筋トレ種目「${ex.name}」（部位: ${catOf(ex.cat).name}）について、初心者向けに日本語で教えてください。次の形式で、簡潔に出力してください。\n\n概要: （この種目が何をするものか1文で）\nやり方:\n- （フォームのポイントを3〜4個、短く）\n\n専門用語は避け、1行は短くしてください。`;
+    (async()=>{
+      try{ await navigator.clipboard.writeText(prompt); toast("プロンプトをコピーしました"); }catch(e){}
+      sheetOpen(`${ex.name}｜AIで下書き`, `
+        <p class="muted small" style="margin:0 0 10px">下の文をAI（ChatGPTやClaudeなど）に貼り付け、返ってきた「概要」と「やり方」を、編集画面に貼り付けてください。</p>
+        <textarea class="io" id="aiArea" readonly style="height:180px">${esc(prompt)}</textarea>
+        <button class="btn-primary" id="aiCopy" style="margin-top:12px">プロンプトをコピー</button>
+        <button class="btn-ghost" id="aiToEdit" style="margin-top:10px">✎ 結果を貼る（編集を開く）</button>
+      `);
+      $("#aiCopy").onclick=async()=>{ try{ await navigator.clipboard.writeText(prompt); toast("コピーしました"); }catch(e){ const a=$("#aiArea"); a.focus(); a.select(); } };
+      $("#aiToEdit").onclick=()=>openHowtoEdit(exId, fromPicker);
+    })();
   }
   function openHowtoEdit(exId, fromPicker){
     const ex=exById(exId); if(!ex)return;
@@ -1126,9 +1219,16 @@
     const exsWithData=[...new Set(DB.logs.filter(l=>l.sets.length).map(l=>l.exId))]
       .map(id=>DB.exercises.find(e=>e.id===id)).filter(Boolean);
     if(!ST.graphExId && exsWithData[0]) ST.graphExId=exsWithData[0].id;
-    const selEx=exById(ST.graphExId), cardioSel=isCardioEx(selEx), stretchSel=isStretchEx(selEx);
-    const lineTitle = stretchSel?"種目ごとの保持時間推移":cardioSel?"種目ごとの記録推移":"種目ごとの重量推移";
-    const lineLegend = stretchSel?"各日の最長保持時間（秒）":cardioSel?"各日の距離（km）。距離がなければ時間（分）":"各トレーニング日の最大重量（kg）";
+    const selEx=exById(ST.graphExId);
+    const selK = selEx ? selEx.kind : "weight";
+    const T = ({
+      weight:["種目ごとの重量推移","各トレーニング日の最大重量（kg）"],
+      reps:["種目ごとの回数推移","各トレーニング日の最高回数"],
+      hold:["種目ごとの保持時間推移","各日の最長保持時間（秒）"],
+      cardio:["種目ごとの記録推移","各日の距離（km）。距離がなければ時間（分）"],
+      stretch:["種目ごとの保持時間推移","各日の最長保持時間（秒）"],
+    })[selK] || ["種目ごとの推移",""];
+    const lineTitle=T[0], lineLegend=T[1];
 
     app.innerHTML=`<div class="screen-title">グラフ</div>` + (exsWithData.length? `
       <div class="card">
@@ -1154,19 +1254,32 @@
   }
   function drawExerciseChart(){
     const selEx=exById(ST.graphExId);
-    const cardio=isCardioEx(selEx), stretch=isStretchEx(selEx);
+    const k = selEx ? selEx.kind : "weight";
+    const cardio=(k==="cardio");
     const logs=DB.logs.filter(l=>l.exId===ST.graphExId && l.sets.length).sort((a,b)=>a.date<b.date?-1:1);
-    if(stretch){
-      const pts=logs.map(l=>({x:l.date, y:Math.max(...l.sets.map(s=>s.sec||0))}));
+    if(k==="reps"){
+      const pts=logs.map(l=>({x:l.date, y:Math.max(0,...l.sets.map(s=>s.r||0))}));
+      lineChart($("#lineC"), pts);
+      const allr=logs.flatMap(l=>l.sets.map(s=>s.r||0));
+      $("#gStats").innerHTML=`
+        <div class="stat"><div class="k">最高回数</div><div class="v num">${Math.max(0,...allr)}<small> 回</small></div></div>
+        <div class="stat"><div class="k">トレ回数</div><div class="v num">${logs.length}<small> 日</small></div></div>
+        <div class="stat"><div class="k">累計回数</div><div class="v num">${allr.reduce((a,b)=>a+b,0)}<small> 回</small></div></div>
+        <div class="stat"><div class="k">合計セット</div><div class="v num">${allr.length}<small> 本</small></div></div>
+      `;
+      return;
+    }
+    if(k==="hold" || k==="stretch"){
+      const pts=logs.map(l=>({x:l.date, y:Math.max(0,...l.sets.map(s=>s.sec||0))}));
       lineChart($("#lineC"), pts);
       const allsec=logs.flatMap(l=>l.sets.map(s=>s.sec||0));
       const maxs=Math.max(0,...allsec);
       const totmin=Math.round(allsec.reduce((a,b)=>a+b,0)/60*10)/10;
       $("#gStats").innerHTML=`
         <div class="stat"><div class="k">最長保持</div><div class="v num">${fmtW(maxs)}<small> 秒</small></div></div>
-        <div class="stat"><div class="k">回数</div><div class="v num">${logs.length}<small> 日</small></div></div>
+        <div class="stat"><div class="k">トレ回数</div><div class="v num">${logs.length}<small> 日</small></div></div>
         <div class="stat"><div class="k">累計時間</div><div class="v num">${fmtW(totmin)}<small> 分</small></div></div>
-        <div class="stat"><div class="k">合計本数</div><div class="v num">${allsec.length}<small> 回</small></div></div>
+        <div class="stat"><div class="k">合計セット</div><div class="v num">${allsec.length}<small> 本</small></div></div>
       `;
       return;
     }
